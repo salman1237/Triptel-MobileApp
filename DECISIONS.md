@@ -5,6 +5,20 @@ Each entry: what was decided, why, and what would make it worth revisiting.
 
 ---
 
+## 2026-11-04 — `.npmrc` with `legacy-peer-deps=true`
+
+**Decided:** Added a project-root `.npmrc` setting `legacy-peer-deps=true`.
+
+**Why:** `expo-router`'s web/tabs support pulls in a `react-dom`-pinned `@radix-ui`
+tree whose peer ranges conflict with npm's (npm 11's) default strict ERESOLVE
+check as soon as any other dependency is added alongside it — this surfaced
+installing `@tanstack/react-query`/`zustand`/etc. during `init.sh`, not from
+anything specific to this app's own code. Without this flag, `npm install`
+fails outright for a solo dev re-running `make setup` on a clean checkout.
+
+**Revisit if:** a future Expo/expo-router SDK bump resolves the upstream peer
+ranges cleanly — recheck by removing the flag and running `npm install`.
+
 ## 2026-11-04 — Expo (managed), not bare React Native
 
 **Decided:** Build on Expo managed workflow, not bare React Native CLI.
