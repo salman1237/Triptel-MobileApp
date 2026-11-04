@@ -35,7 +35,7 @@ export default function RegisterScreen() {
         referral_code: referralCode.trim() || undefined,
       });
       const user = await getMe(token.access_token);
-      await signIn(token.access_token, user);
+      await signIn(token.access_token, user, token.must_change_password);
       if (token.must_change_password) {
         router.replace('/auth/set-password');
       } else {

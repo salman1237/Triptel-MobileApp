@@ -105,3 +105,19 @@ export function resetPassword(token: string, newPassword: string): Promise<Statu
     body: { token, new_password: newPassword },
   });
 }
+
+// Authenticated. Also how a must_change_password account (FR-105) clears
+// that flag - the current password is still required even though the user
+// is signed in, since the credential in play (their phone number, set by a
+// merchant) may be known to other people. See app/api/v1/auth.py.
+export function changePassword(
+  authToken: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<StatusMessage> {
+  return apiFetch<StatusMessage>('/auth/change-password', {
+    method: 'POST',
+    token: authToken,
+    body: { current_password: currentPassword, new_password: newPassword },
+  });
+}

@@ -26,10 +26,9 @@ export default function LoginScreen() {
     try {
       const token = await login({ email: emailOrUsername.trim(), password });
       const user = await getMe(token.access_token);
-      await signIn(token.access_token, user);
+      await signIn(token.access_token, user, token.must_change_password);
       // must_change_password blocks checkout/wallet, not viewing eSIMs - see
-      // docs/Rules.md -> "Auth". app/auth/set-password.tsx is FR-105, not
-      // built yet; this is the route it will live at.
+      // docs/Rules.md -> "Auth".
       if (token.must_change_password) {
         router.replace('/auth/set-password');
       } else {

@@ -15,17 +15,29 @@ type AuthState = {
   status: AuthStatus;
   user: CurrentUser | null;
   token: string | null;
+  // Only login/register return this (GET /auth/me doesn't - see
+  // DECISIONS.md), so a session restored on app start can't know whether a
+  // past-due password change is still outstanding. The backend enforces the
+  // real boundary server-side on checkout/wallet regardless (FR-105); this
+  // is UX gating, not the security boundary.
+  mustChangePassword: boolean;
 };
 
 type AuthContextValue = AuthState & {
-  signIn: (token: string, user: CurrentUser) => Promise<void>;
+  signIn: (token: string, user: CurrentUser, mustChangePassword?: boolean) => Promise<void>;
   signOut: () => Promise<void>;
+  clearMustChangePassword: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({ status: 'loading', user: null, token: null });
+  const [state, setState] = useState<AuthState>({
+    status: 'loading',
+    user: null,
+    token: null,
+    mustChangePassword: false,
+  });
 
   // Session restore on app start (FR-107): a valid stored token silently
   // restores the session; an invalid/expired one falls through to login.
@@ -35,19 +47,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function restore() {
       const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
       if (!token) {
-        if (!cancelled) setState({ status: 'unauthenticated', user: null, token: null });
+        if (!cancelled) setState({ status: 'unauthenticated', user: null, token: null, mustChangePassword: false });
         return;
       }
       try {
         const user = await getMe(token);
-        if (!cancelled) setState({ status: 'authenticated', user, token });
+        if (!cancelled) setState({ status: 'authenticated', user, token, mustChangePassword: false });
       } catch (error) {
         // There is no refresh-token endpoint - a 401 means the token is
         // dead, so clear it rather than retrying it. See docs/Rules.md.
         if (error instanceof ApiError && error.status === 401) {
           await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
         }
-        if (!cancelled) setState({ status: 'unauthenticated', user: null, token: null });
+        if (!cancelled) setState({ status: 'unauthenticated', user: null, token: null, mustChangePassword: false });
       }
     }
 
@@ -60,13 +72,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       ...state,
-      async signIn(token: string, user: CurrentUser) {
+      async signIn(token: string, user: CurrentUser, mustChangePassword = false) {
         await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
-        setState({ status: 'authenticated', user, token });
+        setState({ status: 'authenticated', user, token, mustChangePassword });
       },
       async signOut() {
         await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
-        setState({ status: 'unauthenticated', user: null, token: null });
+        setState({ status: 'unauthenticated', user: null, token: null, mustChangePassword: false });
+      },
+      clearMustChangePassword() {
+        setState((prev) => ({ ...prev, mustChangePassword: false }));
       },
     }),
     [state]
