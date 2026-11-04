@@ -5,6 +5,35 @@ Each entry: what was decided, why, and what would make it worth revisiting.
 
 ---
 
+## 2026-11-04 — Added `npm run test`/`typecheck` scripts; `AuthContext` calls the API wrapper directly, not through `useQuery`
+
+**Decided (two small calls made while building FR-107, session restore):**
+
+1. Added `"test": "jest"` and `"typecheck": "tsc --noEmit"` to `package.json`
+   `scripts`. Every FR's `verification` command in `feature_list.json` is written
+   as `npm test -- <path>` (see e.g. FR-101/102/107), and
+   `docs/Technical_Requirements.md` already documents `npm run typecheck`/
+   `npm test` as the verification commands — but `init.sh` never added these
+   scripts, so no FR's literal verification command could run before this.
+2. `src/state/AuthContext.tsx`'s session-restore effect calls
+   `src/api/auth.ts`'s `getMe` directly, not via a `useQuery` hook, despite
+   `.claude/skills/new-api-integration/SKILL.md` step 6 generally asking for
+   that. Session restore is a one-shot bootstrap that has to resolve *before*
+   the app can decide what to render (login vs. the authenticated tree), which
+   doesn't fit React Query's cache/refetch model as cleanly as a screen fetching
+   its own data does — same shape most RN apps use for auth bootstrapping.
+
+**Why these are recorded rather than just done:** (1) is foundational — it
+silently blocks every other FR's verification command until fixed, not just
+this one. (2) is a one-line deviation from a skill's stated step, which the
+skill itself says not to do silently.
+
+**Revisit if:** a screen other than the root layout needs the same "has a
+fresh user profile" data mid-session (e.g. to react to a changed
+`preferred_currency`) — that's exactly the case `useQuery` is for; add a
+`useCurrentUser` hook wrapping `getMe` at that point rather than duplicating
+`AuthContext`'s bootstrap-only fetch.
+
 ## 2026-11-04 — `.npmrc` with `legacy-peer-deps=true`
 
 **Decided:** Added a project-root `.npmrc` setting `legacy-peer-deps=true`.
