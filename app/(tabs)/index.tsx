@@ -62,11 +62,24 @@ export default function HomeScreen() {
         testID="destination-search-input"
       />
 
-      <Text style={styles.heading}>
-        {isSearching
-          ? t('home', 'search_results_heading', 'Search results')
-          : t('home', 'popular_destinations_heading', 'Popular Destinations')}
-      </Text>
+      <View style={styles.headingRow}>
+        <Text style={styles.heading}>
+          {isSearching
+            ? t('home', 'search_results_heading', 'Search results')
+            : t('home', 'popular_destinations_heading', 'Popular Destinations')}
+        </Text>
+        {!isSearching && (
+          <Pressable
+            onPress={() => router.push('/explore/destinations')}
+            accessibilityRole="button"
+            accessibilityLabel={t('home', 'see_all_destinations', 'See all destinations')}
+            style={styles.seeAllButton}
+            testID="home-see-all-destinations"
+          >
+            <Text style={styles.seeAllText}>{t('home', 'see_all_destinations', 'See all destinations')}</Text>
+          </Pressable>
+        )}
+      </View>
 
       {activeQuery.isLoading && <ActivityIndicator testID="destinations-loading" />}
 
@@ -99,7 +112,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 16,
   },
-  heading: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
+  headingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  heading: { fontSize: 18, fontWeight: '600' },
+  seeAllButton: { minHeight: 44, justifyContent: 'center' },
+  seeAllText: { fontSize: 13, fontWeight: '600', color: '#1D4ED8' },
   item: { minHeight: 44, justifyContent: 'center', paddingVertical: 12 },
   itemText: { fontSize: 16 },
   error: { color: '#B42318', marginBottom: 8 },
