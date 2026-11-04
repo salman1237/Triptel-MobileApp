@@ -5,6 +5,31 @@ Each entry: what was decided, why, and what would make it worth revisiting.
 
 ---
 
+## 2026-11-05 — `must_change_password` can't be rediscovered on session restore; `AuthContext` only knows it from login/register
+
+**Found/decided building FR-105 (forced password change):** `GET /auth/me`
+(`app/api/v1/auth.py` on the backend) never returns `must_change_password` -
+only `POST /auth/login`, `/auth/register`, and `/auth/google` do, via the
+`Token` response. So `AuthContext`'s `mustChangePassword` state is only ever
+set at sign-in time (`signIn(token, user, mustChangePassword)`); session
+restore (FR-107, which only has `GET /auth/me` to work with) always resets it
+to `false`, whether or not a real must-change-password account closed the
+app with the flag still outstanding.
+
+**Why this is OK, not a bug to route around:** the client-side gating this
+powers (hiding checkout/wallet UI) is UX, not the security boundary - the
+backend enforces the real one server-side via `require_password_changed`
+(`app/core/deps.py`), applied to every checkout/wallet endpoint regardless of
+what the client thinks. Confirmed the web app has the identical limitation
+(`D:\eSim\frontend\src\app\auth\login\page.tsx` is the only place it reads
+the flag) - this is a pre-existing backend gap, not something introduced
+here, and not worth a client-side workaround (e.g. persisting the flag
+locally) when the server already covers the real case.
+
+**Revisit if:** the backend ever adds `must_change_password` to `GET
+/auth/me`'s response - then `AuthContext`'s restore effect should start
+reading it from there instead of hardcoding `false`.
+
 ## 2026-11-05 — Maestro CLI setup on this Windows dev machine: use JDK 17, expect connection flakiness, retry pattern for flows
 
 **Decided/learned getting FR-102's e2e flow (`flows/login.yaml`) to actually
