@@ -4,6 +4,49 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 2 — 2026-11-04 — F-000 and FR-107 (session restore) passing
+
+**Did:**
+- Confirmed the device-run step from Session 1: started `npx expo start
+  --android` against the connected USB device (adb device `10EF1302BJ000R5`,
+  model V2344), confirmed Expo Go installed and the JS bundle launched, and
+  pulled a screenshot via `adb shell screencap` to verify the blank-template
+  screen actually renders on-device (the first `adb exec-out screencap | >`
+  attempt through PowerShell corrupted the PNG via text-mode redirection —
+  route through `/sdcard` + `adb pull` instead).
+- **F-000 → passing** (evidence `24e87b9`): `make check` is green and the app
+  boots on a connected device.
+- **FR-107 (session restore on app start) → passing** (evidence `dd5f159`):
+  added `src/lib/apiClient.ts` (shared fetch wrapper + `ApiError`),
+  `src/api/auth.ts` (`GET /auth/me` wrapper, typed from the actual backend
+  route in `D:\eSim\backend\app\api\v1\auth.py` — its response doesn't match
+  the `UserResponse` schema, it predates it), and `src/state/AuthContext.tsx`
+  (restore-on-mount, 401 clears the token, `signIn`/`signOut` for FR-101/102
+  to use later). Test: `__tests__/auth/session-restore.test.tsx`, 3 cases
+  (valid token restores, no token skips the network call, 401 clears the
+  token) — each confirmed to actually fail when the corresponding behavior is
+  reverted, not just pass when present (see `docs/Rules.md` → "Process").
+- Fixed two infra gaps found while building this: `jest-expo` was missing its
+  `@react-native/jest-preset` peer dependency (installed it, wired
+  `"jest": {"preset": "jest-expo"}` into `package.json`), and no FR's
+  `npm test -- <path>` verification command could run because `package.json`
+  had no `test`/`typecheck` scripts (added them). Both recorded in
+  `DECISIONS.md`.
+- Judgment call: `AuthContext` calls `getMe` directly on mount rather than
+  through a `useQuery` hook (a one-line deviation from
+  `.claude/skills/new-api-integration/SKILL.md` step 6) — session restore has
+  to resolve before the app knows what to render, which doesn't fit the
+  query-cache model as cleanly as a screen's own data fetch. See
+  `DECISIONS.md` for when to revisit.
+
+**Next step:** `app/_layout.tsx`/Expo Router wiring (switching the entry point
+off the classic `index.ts`/`App.tsx` and actually mounting `AuthProvider`) was
+deliberately left for whichever FR builds the first real screen — FR-107's own
+verification command is a unit test on the context in isolation and doesn't
+need it. Likely next: FR-102 (Login) or FR-101 (Register), since FR-107
+already covers the restore half of the auth loop; check `feature_list.json`
+for the next `not_started` auth item before starting.
+
 ## Session 1 — 2026-11-04 — `init.sh` run, app scaffolded and verified
 
 **Did:**
