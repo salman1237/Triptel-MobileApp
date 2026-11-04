@@ -5,6 +5,76 @@ Each entry: what was decided, why, and what would make it worth revisiting.
 
 ---
 
+## 2026-11-05 — Maestro CLI setup on this Windows dev machine: use JDK 17, expect connection flakiness, retry pattern for flows
+
+**Decided/learned getting FR-102's e2e flow (`flows/login.yaml`) to actually
+pass, worth recording so a future session doesn't re-discover all of this:**
+
+1. **Maestro needs JDK 17, not whatever newer JDK happens to be on PATH.**
+   This machine's default Java was JDK 23; Maestro's own `logSystemInfo`
+   couldn't even parse its version string ("Java Version: 0"), and every
+   `launchApp`/`openLink` call hung for exactly ~120s before
+   `DeviceServerDiedException`. Installed Temurin 17
+   (`C:\Program Files\Eclipse Adoptium\jdk-17.0.21.9-hotspot` via
+   `winget install --id EclipseAdoptium.Temurin.17.JDK`) and ran Maestro with
+   `JAVA_HOME`/`PATH` pointed at it explicitly - this took the hang rate from
+   ~100% to intermittent. **Any future session invoking `maestro` on this
+   machine should set `JAVA_HOME` to the JDK 17 install first**, e.g.:
+   `export JAVA_HOME="/c/Program Files/Eclipse Adoptium/jdk-17.0.21.9-hotspot"`
+   `export PATH="$JAVA_HOME/bin:$PATH:/c/maestro/bin"`
+2. **The remaining flakiness is a real, confirmed connection problem, not an
+   app or flow bug.** Traced it to the adb/USB (and, to a lesser extent,
+   wireless-adb) connection to the physical test device dropping mid-run - at
+   one point Maestro's own log showed a literal
+   `device '...' not found` mid-flow. Both transports on this network flap in
+   and out on a sub-second-to-several-second timescale. Mitigation: if
+   `maestro test flows/*.yaml` hangs or reports a connection error, just
+   retry (`adb devices -l` to confirm a device shows `device` state, then
+   re-run) - this is expected on this machine/network until the underlying
+   USB/Wi-Fi instability is fixed, not a signal the feature regressed. One
+   full clean run (every step `COMPLETED`, final assertion `COMPLETED`) is
+   enough to trust the flow - don't chase a 100% pass rate on retries here.
+3. **Flow-writing lessons for every future `flows/*.yaml`** (applied in
+   `flows/login.yaml`, worth reusing):
+   - `launchApp` defaults to force-stopping the app first, which triggers a
+     full cold bundle reload from Expo Go and raced badly with an immediately
+     following `openLink` (landed on a nonsense `triptel:///` "Unmatched
+     Route" screen once). Use `launchApp: { stopApp: false }` when the app is
+     already running against the right dev server.
+   - ...but `stopApp: false` means React component state (e.g. a controlled
+     `TextInput`'s value) can carry over from a previous run of the *same*
+     flow file run back-to-back - without clearing it first, a second
+     `inputText` call appends to/interleaves with old text instead of
+     replacing it. Always `tapOn` the field, `eraseText: 500`, then
+     `inputText`.
+   - Android's native autofill can show two different system dialogs around
+     a real login form: "Use your saved password for X?" (can block the
+     password field) and "Save password to Google?" (can cover the screen
+     right after submit). Both need an `optional: true` dismiss step
+     (`tapOn: { text: "No thanks"/"Not now", optional: true }`) since they
+     won't appear on every device/account/run.
+   - `hideKeyboard` isn't supported on every device/keyboard combination
+     (failed outright on the Tecno test device) - always mark it
+     `optional: true` rather than let it hard-fail the flow.
+4. **Registered a dedicated beta-only QA account**
+   (`qa.mobile.login@triptel-test.dev`, directly via `POST /auth/register`
+   against `https://beta.triptel.co`) for `flows/login.yaml` to log in with.
+   Never a real customer account, never pointed at production. Future e2e
+   flows that need a signed-in state (checkout, wallet, etc.) should reuse
+   this account rather than minting a new one per flow, to keep the number of
+   throwaway accounts on beta small.
+5. **Makefile's `e2e` target now calls `maestro` directly** (not
+   `npx maestro`, which isn't an npm package - separate fix, see the
+   `fix(e2e)` commit). Maestro itself was installed to `C:\maestro\bin`
+   (added to the user `PATH` via `setx`/`[Environment]::SetEnvironmentVariable`),
+   downloaded from the GitHub releases zip per
+   `docs.maestro.dev/maestro-cli/how-to-install-maestro-cli`.
+
+**Revisit if:** the connection flakiness gets bad enough to block routine
+`make verify` runs - worth trying a USB hub/cable swap, or investigating
+whether Windows' USB selective-suspend or the Wi-Fi adapter's power-saving
+mode is the actual root cause before accepting this as permanent.
+
 ## 2026-11-05 — Built FR-201 (Home) before FR-101/FR-102 (Register/Login); wired Expo Router now; `AppSettingsContext` ships without currency conversion yet
 
 **Decided (three calls made while picking and building the next feature after

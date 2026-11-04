@@ -73,7 +73,7 @@ describe('Home / destination search (FR-201)', () => {
     const { findByText, getByTestId, queryByText } = await renderHomeScreen();
     await findByText('Thailand');
 
-    fireEvent.changeText(getByTestId('destination-search-input'), 'tur');
+    await fireEvent.changeText(getByTestId('destination-search-input'), 'tur');
 
     await waitFor(
       () => expect(mockedGetCountries).toHaveBeenCalledWith({ search: 'tur' }),

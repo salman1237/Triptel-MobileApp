@@ -1,0 +1,45 @@
+# FR-102 - Login.
+#
+# Runs against Expo Go (not a standalone/dev-client build), so this deep-links
+# via Expo Go's own exp:// scheme + the "/--/" route separator, not the app's
+# own "triptel://" custom scheme - that only resolves inside a standalone or
+# dev-client build. Update the host:port below if the dev machine's LAN IP or
+# `expo start` port changes (shown in the `expo start` terminal output).
+#
+# Uses a dedicated beta-only QA account (qa.mobile.login@triptel-test.dev,
+# registered directly against https://beta.triptel.co for this flow - see
+# DECISIONS.md). Never a real customer account, never production.
+appId: host.exp.exponent
+---
+- launchApp:
+    stopApp: false
+- openLink: "exp://192.168.10.107:8081/--/auth/login"
+- tapOn:
+    id: "login-email-input"
+# stopApp: false means the screen's own component state can carry over from
+# a previous run of this flow - clear it before typing so a leftover value
+# doesn't get appended to instead of replaced.
+- eraseText: 500
+- inputText: "qa.mobile.login@triptel-test.dev"
+# Google's "Use your saved password?" autofill prompt can cover the password
+# field once the email matches a previously-saved credential - optional
+# because it won't appear on every device/account/run.
+- tapOn:
+    text: "No thanks"
+    optional: true
+- tapOn:
+    id: "login-password-input"
+- eraseText: 500
+- inputText: "Qa-Mobile-2026!"
+- hideKeyboard:
+    optional: true
+- tapOn:
+    id: "login-submit"
+# Android's native "Save password?" prompt can cover the Home screen right
+# after a real credential submit - dismiss it if it shows, optional because
+# it won't appear on every device/account.
+- tapOn:
+    text: "Not now"
+    optional: true
+- assertVisible:
+    id: "destinations-list"

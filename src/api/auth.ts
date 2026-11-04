@@ -48,3 +48,25 @@ export type CurrentUser = {
 export function getMe(token: string): Promise<CurrentUser> {
   return apiFetch<CurrentUser>('/auth/me', { token });
 }
+
+export type LoginCredentials = {
+  // The field is literally named "email" in the backend's UserLogin schema,
+  // but it accepts a username too - see app/api/v1/auth.py's login().
+  email: string;
+  password: string;
+};
+
+// Matches Token (app/schemas/auth.py) - the backend has no refresh-token
+// endpoint, so this access_token is the whole session. See docs/Rules.md.
+export type AuthToken = {
+  access_token: string;
+  token_type: string;
+  role: string;
+  user_id: string;
+  username: string;
+  must_change_password: boolean;
+};
+
+export function login(credentials: LoginCredentials): Promise<AuthToken> {
+  return apiFetch<AuthToken>('/auth/login', { method: 'POST', body: credentials });
+}
