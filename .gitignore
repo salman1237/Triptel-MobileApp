@@ -1,0 +1,34 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# Native build output (if a future expo-dev-client / prebuild generates these)
+ios/
+android/
+
+# Env
+.env
+.env.local
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code local overrides (personal, not shared with the team)
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Maestro/Jest artifacts
+coverage/
+.maestro/tmp/
