@@ -1,0 +1,42 @@
+# FR-101 - Register.
+#
+# Runs against Expo Go (not a standalone/dev-client build) - see
+# flows/login.yaml's header comment for the exp:// deep-link details and the
+# JDK 17 / connection-flakiness notes (DECISIONS.md) that apply to every flow
+# in this folder, not just this one.
+#
+# Registration needs a brand-new email/username every run (the backend
+# rejects duplicates) - evalScript generates one from the current timestamp,
+# landing in beta's user table as a disposable, obviously-synthetic account
+# (qa.register.<timestamp>@triptel-test.dev). Never production.
+appId: host.exp.exponent
+---
+- evalScript: '${output.email = "qa.register." + Date.now() + "@triptel-test.dev"}'
+- evalScript: '${output.username = "qa_register_" + Date.now()}'
+- launchApp:
+    stopApp: false
+- openLink: "exp://192.168.10.107:8081/--/auth/register"
+- tapOn:
+    id: "register-email-input"
+- eraseText: 500
+- inputText: ${output.email}
+- tapOn:
+    id: "register-username-input"
+- eraseText: 500
+- inputText: ${output.username}
+- tapOn:
+    id: "register-password-input"
+- eraseText: 500
+- inputText: "Qa-Register-2026!"
+- hideKeyboard:
+    optional: true
+- tapOn:
+    id: "register-submit"
+# Android's native "Save password?" prompt can cover the Home screen right
+# after a real credential submit - dismiss it if it shows, optional because
+# it won't appear on every device/account.
+- tapOn:
+    text: "Not now"
+    optional: true
+- assertVisible:
+    id: "destinations-list"

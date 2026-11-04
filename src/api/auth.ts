@@ -70,3 +70,19 @@ export type AuthToken = {
 export function login(credentials: LoginCredentials): Promise<AuthToken> {
   return apiFetch<AuthToken>('/auth/login', { method: 'POST', body: credentials });
 }
+
+// Matches UserRegister (app/schemas/auth.py). An unknown/expired referral
+// code is silently ignored by the backend, never rejects the signup - see
+// app/api/v1/auth.py's register().
+export type RegisterDetails = {
+  email: string;
+  username: string;
+  password: string;
+  phone?: string;
+  full_name?: string;
+  referral_code?: string;
+};
+
+export function register(details: RegisterDetails): Promise<AuthToken> {
+  return apiFetch<AuthToken>('/auth/register', { method: 'POST', body: details });
+}
