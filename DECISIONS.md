@@ -5,6 +5,44 @@ Each entry: what was decided, why, and what would make it worth revisiting.
 
 ---
 
+## 2026-11-05 — Built FR-201 (Home) before FR-101/FR-102 (Register/Login); wired Expo Router now; `AppSettingsContext` ships without currency conversion yet
+
+**Decided (three calls made while picking and building the next feature after
+FR-107):**
+
+1. Built FR-201 (Home / destination search) next, not FR-101/FR-102 as the
+   prior session's progress note guessed. Reason: `GET /catalog/countries` is
+   public - Home doesn't need an authenticated-vs-not routing decision to
+   render, while Login/Register do (where does a signed-in user land when
+   `/(tabs)/index.tsx` - the literal Home/Explore route in
+   `docs/Architecture.md`'s folder layout - doesn't exist yet?). Building
+   Home first gives Login/Register a real destination to redirect into
+   instead of a throwaway stub screen.
+2. This is also the point `app/_layout.tsx`/Expo Router got wired in (root
+   `Stack` via `Slot`, providers: `QueryClientProvider`, `AppSettingsProvider`,
+   `AuthProvider`; `app/(tabs)/_layout.tsx` with only the Explore tab
+   registered) and the classic entry (`App.tsx`/`index.ts`) removed in favor
+   of `"main": "expo-router/entry"` - deliberately deferred from F-000/FR-107
+   since neither needed a real screen to exist.
+3. `src/state/AppSettingsContext.tsx` (the RN port of the web's
+   `AppSettingsContext`) currently only carries `lang`/`t()`/`languages`/
+   `isRTL` - not `currency`/`convert`/`convertTo`/`formatPrice`/`me`/
+   `publicSettings` from the web version `docs/Architecture.md` describes.
+   Home shows no money, so there was nothing to convert yet.
+
+**Why these are recorded:** (1) and (2) reverse what the prior session's
+progress note suggested would be next - worth knowing why. (3) is a partial
+port of a file `docs/Architecture.md` describes as one piece; a future
+session reading just the architecture doc could reasonably expect the full
+surface to already exist.
+
+**Revisit:** add `convert`/`convertTo`/`formatPrice` (and `me`/`publicSettings`
+if something needs them) to `AppSettingsContext` the first time a screen needs
+to show a price - likely FR-203 (country landing, shows "from €X") or FR-301
+(package list) - port them from `D:\eSim\frontend\src\lib\AppSettingsContext.tsx`
+verbatim, same formula (`CURRENCY_SYMBOLS`, `ZERO_DECIMAL_CURRENCIES`, rates
+from `GET /settings/rates`).
+
 ## 2026-11-04 — Added `npm run test`/`typecheck` scripts; `AuthContext` calls the API wrapper directly, not through `useQuery`
 
 **Decided (two small calls made while building FR-107, session restore):**

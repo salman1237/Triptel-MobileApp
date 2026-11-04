@@ -3,6 +3,7 @@
     "name": "Triptel",
     "slug": "triptel-user-app",
     "version": "1.0.0",
+    "scheme": "triptel",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
