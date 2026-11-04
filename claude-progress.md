@@ -4,6 +4,57 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 1 — 2026-11-04 — `init.sh` run, app scaffolded and verified
+
+**Did:**
+- Ran `init.sh`. `create-expo-app` refuses to scaffold into a non-empty
+  directory, and this repo already had the harness files checked in, so it
+  aborted immediately (no files written). Worked around it by scaffolding into
+  a temp dir and merging the generated app files (`App.tsx`, `app.json`,
+  `index.ts`, `tsconfig.json`, `package.json`/`package-lock.json`, `assets/`)
+  into the repo by hand — skipping the generic `AGENTS.md`/`.claude`/`LICENSE`
+  the scaffold also produces, since this repo already has its own.
+- Installed the core deps (`expo-router`, `expo-secure-store`,
+  `expo-web-browser`, `expo-image-picker`, `expo-sharing`, `expo-print`,
+  `react-native-svg`, `@tanstack/react-query`, `zustand`,
+  `@react-native-async-storage/async-storage`, `react-native-qrcode-svg`) and
+  dev deps (`typescript`, `eslint`, `prettier`, `eslint-config-prettier`,
+  `jest`, `jest-expo`, `@testing-library/react-native`, `@types/react`) from
+  `docs/Technical_Requirements.md`.
+- Hit an `ERESOLVE` peer-dependency conflict (expo-router's web/radix-ui tree
+  vs. npm 11's strict resolver) installing the first batch of extra deps —
+  added `.npmrc` (`legacy-peer-deps=true`) to fix it repo-wide. Recorded in
+  `DECISIONS.md`.
+- Added `@types/jest` + `"types": ["jest"]` in `tsconfig.json` so the smoke
+  test typechecks (init.sh's dep list didn't include it).
+- No `eslint.config.js` existed yet (ESLint 10 needs the flat-config format;
+  init.sh installs eslint/prettier but never writes a config) — ran
+  `npx expo lint`, which generated `eslint.config.js` via
+  `eslint-config-expo` and, as a side effect, pinned `eslint` back to `^9.0.0`
+  (the config package doesn't yet support ESLint 10).
+- Renamed the app from the scaffold's placeholder (`triptel-scaffold`) to
+  `triptel-user-app` / `"Triptel"` in `package.json`/`app.json`.
+- `make`'s binary isn't on PATH in this shell, so ran the three `check`
+  commands directly: `npx tsc --noEmit`, `npx eslint . --max-warnings=0`,
+  `npx jest --ci` — all clean. Layer 3 (Maestro `make e2e`) still needs a
+  connected/booted device, not run yet.
+- Committed: `init: runnable Expo app, one passing test`.
+
+**Known rough edges, not fixed (not needed yet):**
+- `docs/Technical_Requirements.md` also lists `date-fns` as a core dependency;
+  `init.sh` doesn't install it. Left alone — add it when the first screen
+  needs date formatting, not speculatively.
+- No Jest config/preset (`jest-expo`) wired up in `package.json` yet — the
+  smoke test is plain JS and doesn't need it. Will be needed the first time a
+  real RN component test lands under `__tests__/`.
+- `make` isn't available in this shell (Windows/Git Bash) — use the `npx`
+  commands from `docs/Technical_Requirements.md` → "Verification commands"
+  directly, or run via WSL/a shell with `make` on PATH.
+
+**Next step:** start `F-000` (project initialized — mark it via its own
+verification command, not by hand), then `FR-107` (session restore), per the
+prior session's note — almost everything downstream needs auth.
+
 ## Session 0 — 2026-11-04 — Harness written, no app code yet
 
 **Did:**
