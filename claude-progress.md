@@ -4,6 +4,32 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 5 (cont'd) — 2026-11-05 — FR-301, FR-302 passing
+
+**Did:**
+- **FR-301 Package list & filters → passing.** `src/components/PackageBrowser.tsx`
+  - the "choose" state of the web's checkout state machine
+  (`docs/Architecture.md`), scoped to display + filter chips only, no Buy Now
+  yet. `app/explore/[slug].tsx` (FR-203) refactored to use it instead of its
+  own inline list - updated and re-ran FR-203's test to confirm it still
+  passes after the extraction.
+- **FR-302 Discount code entry (pre-login) → passing.** `DiscountCodeBox.tsx`
+  + `estimateDiscount()` wired into `PackageBrowser`, ported verbatim from
+  the web's own component/formula. Found the backend route's own module
+  docstring claims it's authenticated — the actual FastAPI handler has no
+  auth dependency; trusted the running code over the comment. Manually
+  verified against live beta: a made-up code correctly came back "That
+  discount code isn't valid."
+- Both: wrote the test first, confirmed it fails when reverted before
+  restoring. FR-302 needed a `max_discount_amount` cap check specifically
+  (a generic "does filtering work" test wouldn't have caught a missing cap).
+
+**Next step:** FR-303 (Discount code entry, post-login) is the natural next
+- same `PackageBrowser`, but needs a signed-in user and `POST
+  /discounts/preview` (exact, server-verified amount vs. FR-302's estimate).
+  After that, FR-304 (payment method choice) starts needing `GET
+  /wallets/my-wallets`, which doesn't have a wrapper yet.
+
 ## Session 5 — 2026-11-05 — FR-101, FR-104, FR-105, FR-202, FR-203 passing
 
 **Did** (user asked to keep committing/continuing through FRs without
