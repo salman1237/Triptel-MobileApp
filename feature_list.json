@@ -3,7 +3,7 @@
   "items": [
     { "id": "F-000", "title": "Project initialized", "behavior": "init.sh has run: app boots on a connected device to a blank screen, one Jest test passes, make check is green", "verification": "make check", "state": "passing", "evidence": "24e87b9" },
 
-    { "id": "FR-101", "title": "Register", "behavior": "User can create an account with email, username, optional phone, password, optional referral code", "verification": "npm test -- __tests__/auth/register.test.tsx && maestro test flows/register.yaml", "state": "not_started", "evidence": null },
+    { "id": "FR-101", "title": "Register", "behavior": "User can create an account with email, username, optional phone, password, optional referral code", "verification": "npm test -- __tests__/auth/register.test.tsx && maestro test flows/register.yaml", "state": "passing", "evidence": "9efe5aa" },
     { "id": "FR-102", "title": "Login", "behavior": "User can log in with email-or-username + password; must_change_password routes to FR-105", "verification": "npm test -- __tests__/auth/login.test.tsx && maestro test flows/login.yaml", "state": "passing", "evidence": "a9838a2" },
     { "id": "FR-103", "title": "Google Sign-In", "behavior": "User can sign in or sign up with Google; server verifies the ID token", "verification": "npm test -- __tests__/auth/google-signin.test.tsx", "state": "not_started", "evidence": null },
     { "id": "FR-104", "title": "Forgot / reset password", "behavior": "User can request a reset email and set a new password from the reset link", "verification": "npm test -- __tests__/auth/reset-password.test.tsx", "state": "not_started", "evidence": null },
