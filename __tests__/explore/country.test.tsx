@@ -2,8 +2,15 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppSettingsProvider } from '../../src/state/AppSettingsContext';
+import { AuthProvider } from '../../src/state/AuthContext';
 import { getDestination } from '../../src/api/catalog';
 import CountryLandingScreen from '../../app/explore/[slug]';
+
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn().mockResolvedValue(null),
+  setItemAsync: jest.fn(),
+  deleteItemAsync: jest.fn(),
+}));
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -84,7 +91,9 @@ function renderScreen() {
   return render(
     <QueryClientProvider client={queryClient}>
       <AppSettingsProvider>
-        <CountryLandingScreen />
+        <AuthProvider>
+          <CountryLandingScreen />
+        </AuthProvider>
       </AppSettingsProvider>
     </QueryClientProvider>
   );

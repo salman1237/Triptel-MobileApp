@@ -27,3 +27,33 @@ export type DiscountCheckResult =
 export function checkDiscountCode(code: string): Promise<DiscountCheckResult> {
   return apiFetch<DiscountCheckResult>('/discounts/check', { method: 'POST', body: { code } });
 }
+
+// All amount fields come back as decimal strings (Python's str(Decimal)) -
+// see app/api/v1/discounts.py's preview_discount().
+export type DiscountPreviewResult =
+  | {
+      valid: true;
+      code: string;
+      description: string | null;
+      discount_type: 'PERCENT' | 'FIXED';
+      value: string;
+      discount_amount: string;
+      list_price: string;
+      total: string;
+      currency: string;
+    }
+  | {
+      valid: false;
+      reason: string;
+    };
+
+// Authenticated. The exact, server-verified amount for a specific product -
+// this is the number that's actually charged (re-validated again, under a
+// lock, at checkout itself). See docs/Rules.md -> "Payment & checkout".
+export function previewDiscount(token: string, code: string, productId: string): Promise<DiscountPreviewResult> {
+  return apiFetch<DiscountPreviewResult>('/discounts/preview', {
+    method: 'POST',
+    token,
+    body: { code, product_id: productId },
+  });
+}

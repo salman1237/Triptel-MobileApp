@@ -1,8 +1,15 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { AppSettingsProvider } from '../../src/state/AppSettingsContext';
+import { AuthProvider } from '../../src/state/AuthContext';
 import PackageBrowser from '../../src/components/PackageBrowser';
 import type { Product } from '../../src/api/catalog';
+
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn().mockResolvedValue(null),
+  setItemAsync: jest.fn(),
+  deleteItemAsync: jest.fn(),
+}));
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -53,7 +60,9 @@ const products: Product[] = [
 function renderBrowser(items: Product[] = products) {
   return render(
     <AppSettingsProvider>
-      <PackageBrowser products={items} />
+      <AuthProvider>
+        <PackageBrowser products={items} />
+      </AuthProvider>
     </AppSettingsProvider>
   );
 }

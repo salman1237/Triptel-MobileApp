@@ -1,16 +1,18 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Product } from '../api/catalog';
 import { useAppSettings } from '../state/AppSettingsContext';
-import { checkDiscountCode } from '../api/discounts';
+import { useAuth } from '../state/AuthContext';
+import { checkDiscountCode, previewDiscount } from '../api/discounts';
 import type { DiscountCheckResult } from '../api/discounts';
+import { ApiError } from '../lib/apiClient';
 import DiscountCodeBox from './DiscountCodeBox';
 
-// FR-301/FR-302 - the "choose" state of the web's PackageBrowser.tsx state
-// machine (docs/Architecture.md -> "The checkout state machine"). Display +
-// filter + discount-code pre-check only for now - Buy Now / the exact
-// server-verified discount (FR-303) / payment are later FRs; this component
-// grows into the rest of that state machine then, it isn't redesigned.
+// FR-301/FR-302/FR-303 - the "choose" state of the web's PackageBrowser.tsx
+// state machine (docs/Architecture.md -> "The checkout state machine").
+// Display + filter + discount-code pre-check and exact preview only for now
+// - Buy Now / payment (FR-304+) is a later FR; this component grows into
+// the rest of that state machine then, it isn't redesigned.
 export type PackageBrowserProps = {
   products: Product[];
 };
@@ -45,8 +47,11 @@ function validityLabel(product: Product): string {
   return `${product.validity_days} days`;
 }
 
+type ExactPreview = { discount_amount: number; total: number };
+
 export default function PackageBrowser({ products }: PackageBrowserProps) {
   const { t, formatPrice } = useAppSettings();
+  const { status: authStatus, token } = useAuth();
   const [dataSizeFilter, setDataSizeFilter] = useState(ALL_FILTER);
   const [validityFilter, setValidityFilter] = useState(ALL_FILTER);
 
@@ -55,6 +60,13 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
   const [codeError, setCodeError] = useState<string | null>(null);
   const [checkedOk, setCheckedOk] = useState<{ code: string; note: string } | null>(null);
   const [genericDiscount, setGenericDiscount] = useState<GenericDiscount | null>(null);
+
+  // FR-303 - the exact, server-verified amount for a specific product, once
+  // a signed-in user asks for it. Keyed by product id since each product
+  // can qualify for a different amount (per-product/per-country scope, caps).
+  const [exactPreviews, setExactPreviews] = useState<Record<string, ExactPreview>>({});
+  const [previewingProductId, setPreviewingProductId] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const dataSizeOptions = useMemo(() => {
     const seen = new Map<string, number>();
@@ -86,6 +98,9 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
     if (!typed) return;
     setCheckingCode(true);
     setCodeError(null);
+    // A new code invalidates any exact preview confirmed against the old one.
+    setExactPreviews({});
+    setPreviewError(null);
     try {
       const result: DiscountCheckResult = await checkDiscountCode(typed);
       if (result.valid) {
@@ -121,6 +136,34 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
     setCodeError(null);
     setCheckedOk(null);
     setGenericDiscount(null);
+    setExactPreviews({});
+    setPreviewError(null);
+  }
+
+  async function handleConfirmExact(product: Product) {
+    const typed = discountCode.trim();
+    if (!typed || !token) return;
+    setPreviewingProductId(product.id);
+    setPreviewError(null);
+    try {
+      const result = await previewDiscount(token, typed, product.id);
+      if (result.valid) {
+        setExactPreviews((prev) => ({
+          ...prev,
+          [product.id]: { discount_amount: parseFloat(result.discount_amount), total: parseFloat(result.total) },
+        }));
+      } else {
+        setPreviewError(result.reason);
+      }
+    } catch (err) {
+      setPreviewError(
+        err instanceof ApiError && typeof err.detail === 'string'
+          ? err.detail
+          : t('checkout', 'discount_preview_network_error', "Couldn't confirm the exact price. Try again.")
+      );
+    } finally {
+      setPreviewingProductId(null);
+    }
   }
 
   function renderChip(
@@ -155,7 +198,14 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
   }
 
   function renderProduct({ item }: { item: Product }) {
-    const discountedPrice = genericDiscount ? item.retail_price - estimateDiscount(item.retail_price, genericDiscount) : null;
+    const exact = exactPreviews[item.id];
+    const estimatedDiscountedPrice = genericDiscount
+      ? item.retail_price - estimateDiscount(item.retail_price, genericDiscount)
+      : null;
+    const canConfirmExact =
+      genericDiscount && !exact && authStatus === 'authenticated' && discountCode.trim() !== '';
+    const isPreviewingThis = previewingProductId === item.id;
+
     return (
       <View style={styles.card} testID={`package-${item.id}`}>
         {item.is_featured && (
@@ -167,15 +217,44 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
         <Text style={styles.cardMeta}>
           {dataSizeLabel(item)} · {validityLabel(item)}
         </Text>
-        {discountedPrice !== null ? (
+        {exact ? (
+          <View>
+            <View style={styles.priceRow}>
+              <Text style={styles.cardPriceStruck}>{formatPrice(item.retail_price)}</Text>
+              <Text style={styles.cardPrice} testID={`package-exact-price-${item.id}`}>
+                {formatPrice(exact.total)}
+              </Text>
+            </View>
+            <Text style={styles.confirmedLabel} testID={`package-exact-confirmed-${item.id}`}>
+              {t('checkout', 'discount_exact_confirmed', 'Exact price confirmed')}
+            </Text>
+          </View>
+        ) : estimatedDiscountedPrice !== null ? (
           <View style={styles.priceRow}>
             <Text style={styles.cardPriceStruck}>{formatPrice(item.retail_price)}</Text>
             <Text style={styles.cardPrice} testID={`package-discounted-price-${item.id}`}>
-              {formatPrice(discountedPrice)}
+              {formatPrice(estimatedDiscountedPrice)}
             </Text>
           </View>
         ) : (
           <Text style={styles.cardPrice}>{formatPrice(item.retail_price)}</Text>
+        )}
+
+        {canConfirmExact && (
+          <Pressable
+            onPress={() => handleConfirmExact(item)}
+            disabled={isPreviewingThis}
+            accessibilityRole="button"
+            accessibilityLabel={t('checkout', 'discount_confirm_exact', 'See exact price')}
+            style={[styles.confirmButton, isPreviewingThis && styles.buttonDisabled]}
+            testID={`package-confirm-exact-${item.id}`}
+          >
+            {isPreviewingThis ? (
+              <ActivityIndicator size="small" />
+            ) : (
+              <Text style={styles.confirmButtonText}>{t('checkout', 'discount_confirm_exact', 'See exact price')}</Text>
+            )}
+          </Pressable>
         )}
       </View>
     );
@@ -192,6 +271,12 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
         onApply={handleApplyCode}
         onClear={handleClearCode}
       />
+
+      {previewError && (
+        <Text style={styles.previewError} testID="discount-preview-error">
+          {previewError}
+        </Text>
+      )}
 
       {renderChip(
         dataSizeOptions,
@@ -262,5 +347,20 @@ const styles = StyleSheet.create({
   cardPrice: { fontSize: 16, fontWeight: '700', marginTop: 6 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
   cardPriceStruck: { fontSize: 13, color: '#98A2B3', textDecorationLine: 'line-through' },
+  confirmedLabel: { fontSize: 11, color: '#027A48', fontWeight: '600', marginTop: 2 },
+  confirmButton: {
+    minHeight: 36,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#1D4ED8',
+  },
+  buttonDisabled: { opacity: 0.6 },
+  confirmButtonText: { color: '#1D4ED8', fontSize: 12, fontWeight: '700' },
+  previewError: { color: '#B42318', marginBottom: 8, fontSize: 12 },
   empty: { color: '#667085', marginTop: 8 },
 });
