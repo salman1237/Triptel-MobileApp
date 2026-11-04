@@ -4,6 +4,49 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 5 (cont'd) — 2026-11-05 — FR-303, FR-304 passing; genuinely blocked on FR-305/FR-306
+
+**Did:**
+- **FR-303 Discount code entry (post-login) → passing.** `previewDiscount()`
+  wired into `PackageBrowser` as a "See exact price" action per card, once
+  signed in with a code checked. Required adding `AuthProvider` + an
+  `expo-secure-store` mock to every existing test that renders
+  `PackageBrowser` (directly or via `app/explore/[slug].tsx`) - it now calls
+  `useAuth()`, which throws without a provider.
+- **FR-304 Payment method choice → passing.** `src/api/wallets.ts`
+  (`getMyWallets`) + `src/components/PaymentMethodChooser.tsx`. "Buy Now"
+  re-checks the real wallet balance on every tap and either opens the
+  chooser or goes straight to the gateway - scoped to the *decision* only,
+  picking Wallet/Gateway just records the choice for now. Manually verified
+  live: the QA account's 0 wallet balance correctly routed to "continuing to
+  card/mobile banking" with no chooser.
+
+**Stopped here, not by choice but because the next two items are genuinely
+blocked, not just more work:**
+- **FR-305 (Wallet checkout)** calls `POST /orders/checkout` with
+  `payment_method=WALLET` - a real, non-reversible order against the beta
+  database. Can't be exercised live at all right now: the QA account
+  (`qa.mobile.login@triptel-test.dev`) has a 0 wallet balance and no way to
+  fund it from this session (no admin access, no real payment method to top
+  up with). Automated tests alone aren't enough confidence for an endpoint
+  that moves (fake, but real-looking) money - this needs either a funded QA
+  wallet or a deliberate call to proceed on mocked verification only.
+- **FR-306 (Gateway checkout / ShurjoPay)** hits the open question
+  `docs/Architecture.md` → "Payment" flags explicitly: how does ShurjoPay's
+  redirect hand control back to a mobile app (custom-scheme deep link vs.
+  manual-return-then-poll)? That doc says in so many words: "don't guess
+  silently in code." Picking one is a real architecture decision, possibly
+  needing a backend change (a per-request return URL on
+  `POST /payments/shurjopay/order-initiate`), not something to default
+  without it being a deliberate, recorded choice.
+
+**Next step:** resolve the two blockers above before FR-305/FR-306 - either
+in `DECISIONS.md` (the ShurjoPay mechanism) or by sorting out a funded QA
+wallet for live verification. Everything else in `feature_list.json` that
+doesn't depend on checkout (FR-104's sibling items, FR-1xxx profile/KYC,
+FR-9xx guides, FR-1301 tab bar, etc.) is still open and unblocked - a
+reasonable place to keep going before circling back to checkout.
+
 ## Session 5 (cont'd) — 2026-11-05 — FR-301, FR-302 passing
 
 **Did:**
