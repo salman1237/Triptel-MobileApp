@@ -1,7 +1,7 @@
 {
   "_read_me": "One item per FR in docs/Functional_Requirements.md. state is one of not_started | active | passing | blocked. Only a feature's own verification command moving from fail to pass may set state to passing - never edit it directly. WIP = 1: at most one item should be active at a time. evidence is the commit hash once passing.",
   "items": [
-    { "id": "F-000", "title": "Project initialized", "behavior": "init.sh has run: app boots on a connected device to a blank screen, one Jest test passes, make check is green", "verification": "make check", "state": "not_started", "evidence": null },
+    { "id": "F-000", "title": "Project initialized", "behavior": "init.sh has run: app boots on a connected device to a blank screen, one Jest test passes, make check is green", "verification": "make check", "state": "passing", "evidence": "24e87b9" },
 
     { "id": "FR-101", "title": "Register", "behavior": "User can create an account with email, username, optional phone, password, optional referral code", "verification": "npm test -- __tests__/auth/register.test.tsx && maestro test flows/register.yaml", "state": "not_started", "evidence": null },
     { "id": "FR-102", "title": "Login", "behavior": "User can log in with email-or-username + password; must_change_password routes to FR-105", "verification": "npm test -- __tests__/auth/login.test.tsx && maestro test flows/login.yaml", "state": "not_started", "evidence": null },
