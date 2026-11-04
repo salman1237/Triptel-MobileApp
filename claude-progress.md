@@ -4,6 +4,38 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 4 — 2026-11-05 — FR-102 (Login) passing; Maestro CLI set up
+
+**Did:**
+- Built `app/auth/login.tsx` (email-or-username + password, routes to `/` or
+  `/auth/set-password` based on `must_change_password`), extended
+  `src/api/auth.ts` with `login()`/`AuthToken`. Test:
+  `__tests__/auth/login.test.tsx`, 3 cases, each confirmed to fail when
+  reverted. Also fixed an un-awaited `fireEvent` bug in this file and
+  `__tests__/explore/home.test.tsx` (testing-library v14's
+  `fireEvent.changeText`/`.press` are async).
+- **FR-102 → passing** (evidence `a9838a2`) — the harder part this session
+  was getting `flows/login.yaml` (the e2e half of FR-102's verification
+  command) to actually pass. Installed Maestro CLI
+  (`C:\maestro\bin`, on `PATH`), registered a dedicated beta-only QA account
+  (`qa.mobile.login@triptel-test.dev`) for it to log in with. Hit a long
+  chain of environment issues before getting a clean run — full writeup,
+  including the JDK 17 requirement and the retry pattern needed on this
+  machine, is in `DECISIONS.md`. Short version: **this machine's Maestro
+  setup needs `JAVA_HOME` pointed at a JDK 17 install
+  (`C:\Program Files\Eclipse Adoptium\jdk-17.0.21.9-hotspot`), and the
+  adb/USB (and wireless-adb) connection to the physical test device is
+  genuinely flaky — expect to retry `maestro test` a few times**, that's
+  environmental, not a sign the feature broke.
+- Fixed `Makefile`'s `e2e` target, which called `npx maestro` — Maestro
+  Mobile isn't an npm package, it's the standalone CLI above. Separate
+  commit (`fix(e2e): ...`).
+
+**Next step:** `feature_list.json` — FR-101 (Register) is the natural next
+auth item (same screen pattern as Login, same QA-account approach works for
+its own e2e flow), or FR-103/104/105 round out the rest of the auth group.
+Check `feature_list.json` for current state before picking.
+
 ## Session 3 — 2026-11-05 — FR-201 (Home / destination search) passing; Expo Router wired
 
 **Did:**
