@@ -1,10 +1,10 @@
 import React from 'react';
-import { ActivityIndicator, FlatList, Image, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { getDestination } from '../../src/api/catalog';
-import type { Product } from '../../src/api/catalog';
 import { useAppSettings } from '../../src/state/AppSettingsContext';
+import PackageBrowser from '../../src/components/PackageBrowser';
 
 export default function CountryLandingScreen() {
   const { t, formatPrice } = useAppSettings();
@@ -37,27 +37,6 @@ export default function CountryLandingScreen() {
   const { country, products } = destinationQuery.data;
   const cheapestPrice = products.length > 0 ? Math.min(...products.map((p) => p.retail_price)) : null;
 
-  function renderProduct({ item }: { item: Product }) {
-    return (
-      <View style={styles.productCard} testID={`product-${item.id}`}>
-        {item.is_featured && (
-          <Text style={styles.featuredBadge} testID={`product-featured-${item.id}`}>
-            {t('explore', 'package_featured_badge', 'Recommended')}
-          </Text>
-        )}
-        <Text style={styles.productTitle}>{item.title_en}</Text>
-        <Text style={styles.productMeta}>
-          {item.is_unlimited
-            ? t('explore', 'package_unlimited', 'Unlimited data')
-            : t('explore', 'package_data_amount', `${item.data_amount_gb} GB`)}
-          {' · '}
-          {t('explore', 'package_validity', `${item.validity_days} days`)}
-        </Text>
-        <Text style={styles.productPrice}>{formatPrice(item.retail_price)}</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -80,7 +59,7 @@ export default function CountryLandingScreen() {
           {t('explore', 'country_no_packages', 'No packages are available for this destination yet.')}
         </Text>
       ) : (
-        <FlatList data={products} keyExtractor={(item) => item.id} renderItem={renderProduct} testID="country-package-list" />
+        <PackageBrowser products={products} />
       )}
     </View>
   );
@@ -93,28 +72,6 @@ const styles = StyleSheet.create({
   countryName: { fontSize: 24, fontWeight: '700' },
   packageCount: { fontSize: 14, color: '#667085', marginTop: 4 },
   cheapestPrice: { fontSize: 16, fontWeight: '600', marginTop: 4 },
-  productCard: {
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: '#D0D5DD',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  featuredBadge: {
-    alignSelf: 'flex-start',
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#1D4ED8',
-    backgroundColor: '#DBEAFE',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginBottom: 6,
-  },
-  productTitle: { fontSize: 16, fontWeight: '600' },
-  productMeta: { fontSize: 13, color: '#667085', marginTop: 2 },
-  productPrice: { fontSize: 16, fontWeight: '700', marginTop: 6 },
   error: { color: '#B42318' },
   empty: { color: '#667085' },
 });

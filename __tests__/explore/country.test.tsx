@@ -113,7 +113,7 @@ describe('Country landing screen (FR-203)', () => {
 
     expect(await findByText('5GB / 7 days')).toBeTruthy();
     expect(await findByText('Unlimited / 14 days')).toBeTruthy();
-    expect(await findByTestId('product-featured-p2')).toBeTruthy();
+    expect(await findByTestId('package-featured-p2')).toBeTruthy();
 
     expect(mockedGetDestination).toHaveBeenCalledWith('japan');
   });
