@@ -5,14 +5,18 @@ import { useAppSettings } from '../state/AppSettingsContext';
 import { useAuth } from '../state/AuthContext';
 import { checkDiscountCode, previewDiscount } from '../api/discounts';
 import type { DiscountCheckResult } from '../api/discounts';
+import { getMyWallets } from '../api/wallets';
 import { ApiError } from '../lib/apiClient';
 import DiscountCodeBox from './DiscountCodeBox';
+import PaymentMethodChooser from './PaymentMethodChooser';
 
-// FR-301/FR-302/FR-303 - the "choose" state of the web's PackageBrowser.tsx
-// state machine (docs/Architecture.md -> "The checkout state machine").
-// Display + filter + discount-code pre-check and exact preview only for now
-// - Buy Now / payment (FR-304+) is a later FR; this component grows into
-// the rest of that state machine then, it isn't redesigned.
+// FR-301/FR-302/FR-303/FR-304 - the "choose" state of the web's
+// PackageBrowser.tsx state machine (docs/Architecture.md -> "The checkout
+// state machine"). Display, filter, discount-code pre-check/exact preview,
+// and the wallet-vs-gateway *decision* only for now - actually charging
+// something (FR-305 wallet checkout, FR-306 gateway checkout) is a later
+// FR; this component grows into the rest of that state machine then, it
+// isn't redesigned.
 export type PackageBrowserProps = {
   products: Product[];
 };
@@ -67,6 +71,20 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
   const [exactPreviews, setExactPreviews] = useState<Record<string, ExactPreview>>({});
   const [previewingProductId, setPreviewingProductId] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+
+  // FR-304 - which path a Buy Now tap resolved to, per product. The wallet
+  // check happens again, for real, on this same product right before the
+  // chooser opens - a card's badge/estimate is never trusted as the final
+  // payable amount. See docs/Rules.md -> "Payment & checkout".
+  const [buyingProductId, setBuyingProductId] = useState<string | null>(null);
+  const [buyError, setBuyError] = useState<string | null>(null);
+  const [chooserState, setChooserState] = useState<{ product: Product; payableAmount: number; walletBalance: number } | null>(
+    null
+  );
+  const [goingToGatewayProductId, setGoingToGatewayProductId] = useState<string | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<{ productId: string; method: 'WALLET' | 'GATEWAY' } | null>(
+    null
+  );
 
   const dataSizeOptions = useMemo(() => {
     const seen = new Map<string, number>();
@@ -166,6 +184,42 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
     }
   }
 
+  async function handleBuyNow(product: Product) {
+    // Not signed in: resuming the exact purchase after login (FR-106) isn't
+    // built yet - see docs/Architecture.md -> "The checkout state machine".
+    // Not acting here (rather than guessing a redirect) until that exists.
+    if (authStatus !== 'authenticated' || !token) return;
+
+    setBuyingProductId(product.id);
+    setBuyError(null);
+    setGoingToGatewayProductId(null);
+    const payableAmount = exactPreviews[product.id]?.total ?? product.retail_price;
+    try {
+      const wallets = await getMyWallets(token);
+      const spendable = wallets
+        .filter((w) => (w.wallet_type === 'DEFAULT' || w.wallet_type === 'REWARD') && !w.is_frozen)
+        .reduce((sum, w) => sum + w.balance, 0);
+
+      if (spendable >= payableAmount) {
+        setChooserState({ product, payableAmount, walletBalance: spendable });
+      } else {
+        // Wallet can't cover it - straight to the gateway, no chooser.
+        // FR-306 (actually starting the gateway flow) isn't built yet.
+        setGoingToGatewayProductId(product.id);
+      }
+    } catch {
+      setBuyError(t('checkout', 'buy_now_network_error', "Couldn't check your wallet balance. Try again."));
+    } finally {
+      setBuyingProductId(null);
+    }
+  }
+
+  function handleChoosePaymentMethod(method: 'WALLET' | 'GATEWAY') {
+    if (!chooserState) return;
+    setSelectedPaymentMethod({ productId: chooserState.product.id, method });
+    setChooserState(null);
+  }
+
   function renderChip(
     options: string[],
     selected: string,
@@ -205,6 +259,9 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
     const canConfirmExact =
       genericDiscount && !exact && authStatus === 'authenticated' && discountCode.trim() !== '';
     const isPreviewingThis = previewingProductId === item.id;
+    const isBuyingThis = buyingProductId === item.id;
+    const isGoingToGateway = goingToGatewayProductId === item.id;
+    const selectedMethodForThis = selectedPaymentMethod?.productId === item.id ? selectedPaymentMethod.method : null;
 
     return (
       <View style={styles.card} testID={`package-${item.id}`}>
@@ -256,6 +313,41 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
             )}
           </Pressable>
         )}
+
+        {authStatus === 'authenticated' && (
+          <Pressable
+            onPress={() => handleBuyNow(item)}
+            disabled={isBuyingThis}
+            accessibilityRole="button"
+            accessibilityLabel={t('checkout', 'buy_now', 'Buy Now')}
+            style={[styles.buyButton, isBuyingThis && styles.buttonDisabled]}
+            testID={`package-buy-now-${item.id}`}
+          >
+            {isBuyingThis ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.buyButtonText}>{t('checkout', 'buy_now', 'Buy Now')}</Text>
+            )}
+          </Pressable>
+        )}
+
+        {isGoingToGateway && (
+          <Text style={styles.gatewayNote} testID={`package-going-to-gateway-${item.id}`}>
+            {t(
+              'checkout',
+              'buy_now_going_to_gateway',
+              "Your wallet doesn't cover this - continuing to card/mobile banking."
+            )}
+          </Text>
+        )}
+
+        {selectedMethodForThis && (
+          <Text style={styles.gatewayNote} testID={`package-selected-method-${item.id}`}>
+            {selectedMethodForThis === 'WALLET'
+              ? t('checkout', 'buy_now_selected_wallet', 'Paying with wallet balance')
+              : t('checkout', 'buy_now_selected_gateway', 'Paying with card/mobile banking')}
+          </Text>
+        )}
       </View>
     );
   }
@@ -275,6 +367,12 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
       {previewError && (
         <Text style={styles.previewError} testID="discount-preview-error">
           {previewError}
+        </Text>
+      )}
+
+      {buyError && (
+        <Text style={styles.previewError} testID="buy-now-error">
+          {buyError}
         </Text>
       )}
 
@@ -303,6 +401,17 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
           keyExtractor={(item) => item.id}
           renderItem={renderProduct}
           testID="package-browser-list"
+        />
+      )}
+
+      {chooserState && (
+        <PaymentMethodChooser
+          visible
+          payableAmount={chooserState.payableAmount}
+          walletBalance={chooserState.walletBalance}
+          onChooseWallet={() => handleChoosePaymentMethod('WALLET')}
+          onChooseGateway={() => handleChoosePaymentMethod('GATEWAY')}
+          onCancel={() => setChooserState(null)}
         />
       )}
     </View>
@@ -362,5 +471,17 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.6 },
   confirmButtonText: { color: '#1D4ED8', fontSize: 12, fontWeight: '700' },
   previewError: { color: '#B42318', marginBottom: 8, fontSize: 12 },
+  buyButton: {
+    minHeight: 40,
+    marginTop: 8,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: 8,
+    backgroundColor: '#1D4ED8',
+  },
+  buyButtonText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  gatewayNote: { fontSize: 11, color: '#667085', marginTop: 6 },
   empty: { color: '#667085', marginTop: 8 },
 });
