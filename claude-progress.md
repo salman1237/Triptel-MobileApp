@@ -4,6 +4,57 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 5 — 2026-11-05 — FR-101, FR-104, FR-105, FR-202, FR-203 passing
+
+**Did** (user asked to keep committing/continuing through FRs without
+stopping to check in each time):
+- **FR-101 Register → passing.** `app/auth/register.tsx`, `register()` in
+  `src/api/auth.ts`. `flows/register.yaml` generates a unique email/username
+  per run via `evalScript` (the backend rejects duplicates) and reused every
+  device-interaction lesson from `flows/login.yaml` - passed clean on the
+  first try.
+- **Skipped FR-103 (Google Sign-In)** - needs a real `GOOGLE_CLIENT_ID` this
+  session has no way to provision (Google Cloud Console project access).
+  Left `not_started` rather than half-build against a backend that 503s it.
+- **FR-104 Forgot/reset password → passing.** Both screens
+  (`forgot-password.tsx`, `reset-password.tsx`) - the reset-password one
+  honors a `?token=` param for when deep-linking exists, with manual entry
+  as the fallback now (no deep-link interception yet, see CLAUDE.md).
+- **FR-105 Forced password change → passing.** `set-password.tsx`. Found
+  while building this: `GET /auth/me` never returns `must_change_password` -
+  only login/register do - so `AuthContext` can't rediscover it on session
+  restore. Not a bug to fix here: the backend enforces the real boundary
+  server-side regardless (`require_password_changed`), same as the web app.
+  Full writeup in `DECISIONS.md`.
+- **Skipped FR-106 (resume purchase after login)** - needs the checkout
+  screens (FR-301+) to exist first; nothing to resume into yet.
+- **FR-202 Full destination directory → passing.** `explore/destinations.tsx`
+  (`SectionList`, grouped by region, client-side filter). Linked from Home.
+  Manually found the backend's `region` field is empty for every country on
+  beta right now - everything groups into "Other destinations" today. Not a
+  bug in this code; will group correctly once the backend populates it.
+- **FR-203 Country landing screen → passing.** `explore/[slug].tsx` -
+  `GET /catalog/destinations/{slug}` in one call. **This is also where
+  `AppSettingsContext` got real currency conversion** (`convert`/
+  `convertTo`/`formatPrice`, `GET /settings/rates`), deferred from FR-201 -
+  ported from the web's `AppSettingsContext` verbatim. Manually verified
+  against real Japan data on-device: 21 packages, correct BDT prices,
+  correct cheapest price, "Recommended" badges.
+- Every feature this session: wrote the test first, confirmed it actually
+  fails when the behavior is reverted (not vacuous - see `docs/Rules.md` →
+  "Process"), then restored it. FR-203's cheapest-price test needed its
+  fixture reordered (featured/pricier item first) to actually be capable of
+  catching a `products[0]`-instead-of-minimum bug - worth remembering for
+  any future "pick the min/max from a list" test.
+
+**Next step:** `feature_list.json` → FR-301 (Package list & filters) is the
+natural next pick - the package cards already exist inside FR-203's screen,
+FR-301 is about adding filter chips (data size/validity) and likely
+extracting a shared `PackageBrowser` component per `docs/Architecture.md`'s
+folder layout, since the full checkout state machine will need the same
+component later. FR-106 and FR-103 are still blocked (see above) - check
+before resuming them.
+
 ## Session 4 — 2026-11-05 — FR-102 (Login) passing; Maestro CLI set up
 
 **Did:**

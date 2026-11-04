@@ -13,7 +13,7 @@
 
     { "id": "FR-201", "title": "Home / destination search", "behavior": "User can search countries live and see a Popular Destinations grid from the home screen", "verification": "npm test -- __tests__/explore/home.test.tsx", "state": "passing", "evidence": "ee6fe81" },
     { "id": "FR-202", "title": "Full destination directory", "behavior": "User can browse/search every country, grouped by region", "verification": "npm test -- __tests__/explore/destinations.test.tsx", "state": "passing", "evidence": "521c062" },
-    { "id": "FR-203", "title": "Country landing (explore) screen", "behavior": "Opening a country shows flag/name/package-count/cheapest-price and the package list", "verification": "npm test -- __tests__/explore/country.test.tsx", "state": "not_started", "evidence": null },
+    { "id": "FR-203", "title": "Country landing (explore) screen", "behavior": "Opening a country shows flag/name/package-count/cheapest-price and the package list", "verification": "npm test -- __tests__/explore/country.test.tsx", "state": "passing", "evidence": "6acce35" },
 
     { "id": "FR-301", "title": "Package list & filters", "behavior": "User can see package cards (GB/unlimited, validity, price, featured badge) and filter by data size/validity", "verification": "npm test -- __tests__/checkout/package-list.test.tsx", "state": "not_started", "evidence": null },
     { "id": "FR-302", "title": "Discount code entry (pre-login)", "behavior": "An unauthenticated user can check a discount code and see an estimated saving per package", "verification": "npm test -- __tests__/checkout/discount-precheck.test.tsx", "state": "not_started", "evidence": null },
