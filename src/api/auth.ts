@@ -86,3 +86,22 @@ export type RegisterDetails = {
 export function register(details: RegisterDetails): Promise<AuthToken> {
   return apiFetch<AuthToken>('/auth/register', { method: 'POST', body: details });
 }
+
+export type StatusMessage = {
+  status: string;
+  message: string;
+};
+
+// Always returns the same generic response whether or not the email is
+// registered - never surface a different message for "not found" here, that
+// would let an attacker enumerate accounts. See app/api/v1/auth.py.
+export function forgotPassword(email: string): Promise<StatusMessage> {
+  return apiFetch<StatusMessage>('/auth/forgot-password', { method: 'POST', body: { email } });
+}
+
+export function resetPassword(token: string, newPassword: string): Promise<StatusMessage> {
+  return apiFetch<StatusMessage>('/auth/reset-password', {
+    method: 'POST',
+    body: { token, new_password: newPassword },
+  });
+}
