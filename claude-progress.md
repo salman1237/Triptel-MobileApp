@@ -4,6 +4,59 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 3 — 2026-11-05 — FR-201 (Home / destination search) passing; Expo Router wired
+
+**Did:**
+- Picked FR-201 over FR-101/FR-102 (the prior session's guess) — reasoning
+  and tradeoffs in `DECISIONS.md`. This is also where Expo Router actually
+  got wired up (`app/_layout.tsx`, `app/(tabs)/_layout.tsx`): the classic
+  `App.tsx`/`index.ts` scaffold entry is gone, `package.json`'s `main` is now
+  `expo-router/entry`.
+- Shipped `src/api/catalog.ts`, `src/api/settings.ts`, a partial
+  `src/state/AppSettingsContext.tsx` (i18n only, no currency yet — see
+  `DECISIONS.md`), and `app/(tabs)/index.tsx` (live debounced search +
+  Popular Destinations grid). Test: `__tests__/explore/home.test.tsx`, 2
+  cases, both confirmed to actually fail when reverted.
+- **FR-201 → passing** (evidence `ee6fe81`).
+- Found and fixed two more `init.sh` gaps (on top of Session 2's), both only
+  surfaced by actually running on the connected device, not by the test
+  suite:
+  - `@react-native-async-storage/async-storage` was installed via plain `npm
+    install` in `init.sh` instead of `expo install`, landing v3.1.1 — too new
+    for Expo Go's bundled native module (runtime error: "Native module is
+    null, cannot access legacy storage"). Re-installed via `expo install` →
+    pinned to 2.2.0. **If a future session adds another native-module
+    dependency (anything with native Android/iOS code, not pure JS), always
+    use `npx expo install <pkg>`, never plain `npm install` — this is the
+    second time plain `npm install` landed an SDK-incompatible native module
+    version; `docs/Technical_Requirements.md`'s dependency table doesn't
+    currently flag which listed packages are native vs. pure JS.**
+  - `expo-router` needs a set of peer dependencies `init.sh` never installed
+    (`react-native-safe-area-context`, `react-native-screens`'s full
+    companion set, `react-native-gesture-handler`, `react-native-reanimated`,
+    `expo-linking`, `expo-symbols`, `@expo/metro-runtime`) — only breaks once
+    a route under `app/` actually gets exercised, so F-000/FR-107's checks
+    never caught it. Installed via `expo install`.
+- **Operational note for next session:** `npx expo start` run via a
+  backgrounded shell task does not reliably get killed by stopping the task
+  (`TaskStop`/killing the wrapper) — the underlying Metro `node` process can
+  survive as an orphan and keep serving a stale bundle/cache. If the device
+  shows a stale screen or a resolver error (`Unable to resolve ...`,
+  `Failed to get the SHA-1 for ...`) after a structural change (entry point,
+  a native dependency's version), check `Get-Process node` for a
+  long-running orphan and `taskkill //PID <id> //F` it before starting a
+  fresh `expo start -c`. Also: the CLI's own "Opening exp://... on <device>"
+  line does not reliably make the device actually fetch the new bundle on
+  its own — forcing it via
+  `adb shell am force-stop host.exp.exponent && adb shell am start -a android.intent.action.VIEW -d "exp://<ip>:8081"`
+  was needed every time in this session.
+
+**Next step:** `feature_list.json` — next `not_started` auth item (FR-101
+Register or FR-102 Login) now has a real place to land post-auth (`/(tabs)`),
+so the chicken-and-egg problem from Session 2 is gone. Check
+`feature_list.json` for the current `active`/`not_started` state before
+picking.
+
 ## Session 2 — 2026-11-04 — F-000 and FR-107 (session restore) passing
 
 **Did:**
