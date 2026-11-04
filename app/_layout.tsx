@@ -1,8 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Slot } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '../src/state/AuthContext';
-import { AppSettingsProvider } from '../src/state/AppSettingsContext';
+import { AuthProvider, useAuth } from '../src/state/AuthContext';
+import { AppSettingsProvider, useAppSettings } from '../src/state/AppSettingsContext';
+
+// A signed-in account's currency preference follows them across devices -
+// same reasoning as the web app (D:\eSim\frontend\src\lib\AppSettingsContext.tsx).
+function CurrencySync() {
+  const { user } = useAuth();
+  const { setCurrency } = useAppSettings();
+
+  useEffect(() => {
+    if (user?.preferred_currency) setCurrency(user.preferred_currency);
+  }, [user?.preferred_currency, setCurrency]);
+
+  return null;
+}
 
 export default function RootLayout() {
   const [queryClient] = useState(() => new QueryClient());
@@ -11,6 +24,7 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AppSettingsProvider>
         <AuthProvider>
+          <CurrencySync />
           <Slot />
         </AuthProvider>
       </AppSettingsProvider>

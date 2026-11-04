@@ -17,6 +17,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 jest.mock('../../src/api/settings', () => ({
   getLanguages: jest.fn().mockResolvedValue([]),
   getTranslations: jest.fn().mockResolvedValue({ language_code: 'en', namespaces: {} }),
+  getRates: jest.fn().mockResolvedValue([]),
 }));
 
 jest.mock('../../src/api/auth', () => ({

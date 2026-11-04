@@ -24,3 +24,15 @@ export function getLanguages(): Promise<LanguageMeta[]> {
 export function getTranslations(lang: string): Promise<TranslationsResponse> {
   return apiFetch<TranslationsResponse>(`/settings/translations/${encodeURIComponent(lang)}`);
 }
+
+export type CurrencyRate = {
+  currency_code: string;
+  rate_to_base: number;
+  is_manual_override: boolean;
+  manual_rate: number | null;
+  source: string;
+};
+
+export function getRates(): Promise<CurrencyRate[]> {
+  return apiFetch<CurrencyRate[]>('/settings/rates');
+}
