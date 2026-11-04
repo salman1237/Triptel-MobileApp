@@ -16,7 +16,7 @@ test:
 	npx jest --ci
 
 e2e:
-	npx maestro test flows/
+	maestro test flows/
 
 # Layers 1-2 (static + runtime). Run every session, before every commit.
 check: typecheck lint test
