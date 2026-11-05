@@ -5,6 +5,49 @@ Each entry: what was decided, why, and what would make it worth revisiting.
 
 ---
 
+## 2026-11-05 — Found live on-device: wallet balance showed "NaN" (FR-304/FR-1001 regression)
+
+**Found doing a live device smoke test** (the user asked directly whether a
+connected device was being checked - it wasn't, for every FR since FR-1001
+this session): the Profile screen's wallet balance rendered "৳NaN" against
+the real QA account, not the correct €0.00.
+
+**Root cause:** `WalletResponse.balance` is a `Decimal` on the backend
+(`app/schemas/wallet.py`), which FastAPI/Pydantic serializes to JSON as a
+**string** (e.g. `"0.00"`), not a number - the same pattern already handled
+in `discounts.ts` for `/discounts/preview`. `src/api/wallets.ts` typed
+`balance: number` but never parsed it. Both consumers summed wallets with
+`.reduce((sum, w) => sum + w.balance, 0)` - JS's `+` does string
+concatenation the instant either side is a string, so `0 + "0.00"` produces
+the string `"00.00"`, not the number `0`. `formatPrice()` then multiplies
+that (safe, coerces) but the concatenated multi-wallet result is no longer
+a valid numeric string, so `Number(...)` returns `NaN`.
+
+**Fixed** by parsing `balance` to a real `Number` once, inside
+`getMyWallets()` itself, so every consumer (Profile's mini-view,
+`PackageBrowser`'s wallet-vs-gateway spendable check from FR-304) gets a
+correct number. Added `__tests__/api/wallets.test.ts` - mocks `fetch`
+directly (not `getMyWallets`) so it actually exercises the JSON string ->
+number conversion, which every screen-level test's mocked `getMyWallets`
+fixture had been skipping past with clean numeric fixture data.
+
+**Real-world impact this had already shipped**: `PackageBrowser`'s "Buy Now"
+spendable check (`spendable >= payableAmount`) compared `NaN >= amount`,
+which is always `false` - meaning a real user with actual wallet funds
+would never have been offered the Wallet payment option, silently routed
+to gateway every time. `FR-304` was marked `passing` entirely on jest tests
+that mock `getMyWallets` with clean numeric data, never catching this.
+
+**Broader note, not acted on now:** other `Decimal` fields from this
+backend (e.g. `ProductResponse.retail_price`) have the same string-on-the-
+wire shape, but are currently only used with `*`/`-`/comparison, which
+coerce a numeric string correctly in JS - only `+`/`.reduce`-style summing
+is the dangerous case. No other instance found. Worth remembering for any
+future money-summing code (FR-601 wallet overview, cart/order totals):
+parse `Decimal` fields to `Number` explicitly at the API boundary, the same
+way `discounts.ts` and now `wallets.ts` do - don't trust the TS `number`
+annotation alone.
+
 ## 2026-11-05 — FR-401's `EsimQr` logo is the bundled `assets/icon.png`, not the dynamic branding settings
 
 **Decided:** `src/components/EsimQr.tsx` always uses the locally bundled
