@@ -5,6 +5,23 @@ Each entry: what was decided, why, and what would make it worth revisiting.
 
 ---
 
+## 2026-11-05 — FR-901's embedded video is a hardcoded production web URL
+
+**Decided:** `app/guides/compatible-phones.tsx` points its `expo-video` player
+directly at `https://triptel.co/guides/check-esim-support.mp4` - the web app's
+own static asset, same one `frontend/src/app/guides/compatible-phones/page.tsx`
+embeds - rather than deriving it from `EXPO_PUBLIC_API_URL`.
+
+**Why:** `docs/Rules.md`'s "real backend" / beta-vs-production split is about the
+`/api/v1` backend this app talks to for data, not static marketing/guide assets
+served from the web app's own public folder. That video isn't part of the API at
+all - it's the same public file regardless of whether the app is pointed at beta
+or production for everything else, so there's no beta equivalent to prefer.
+
+**Revisit if:** the web app ever moves guide assets behind the API domain, or a
+CDN/base-URL is introduced for static content - then this should read from that
+instead of a hardcoded literal.
+
 ## 2026-11-05 — `must_change_password` can't be rediscovered on session restore; `AuthContext` only knows it from login/register
 
 **Found/decided building FR-105 (forced password change):** `GET /auth/me`

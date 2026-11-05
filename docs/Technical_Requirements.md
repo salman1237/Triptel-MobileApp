@@ -23,6 +23,7 @@
 | `expo-sharing` | Share install links / printable receipts |
 | `expo-print` | Render a receipt/eSIM sheet to PDF (RN equivalent of the web's print-only pages) |
 | `date-fns` (or equivalent already used on the web, check `frontend/package.json`) | Date formatting consistent with the web app |
+| `expo-video` | Embedded *#06#/EID check-video on the compatible-phones guide (FR-901) |
 
 Do not add a dependency outside this list without updating this doc — that's the
 whole point of pinning it here instead of letting `package.json` drift silently.
