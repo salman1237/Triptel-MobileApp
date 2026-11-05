@@ -4,6 +4,39 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 6 (cont'd) — 2026-11-05 — FR-1201 passing
+
+**Did:**
+- **FR-1201 Legal documents → passing** (`3fbb07d`). `app/legal/[slug].tsx` -
+  tabs over the same 6 hardcoded slugs as the backend's `LEGAL_TITLES`
+  (`app/services/legal_content_svc.py`) and the web's `LEGAL_LINKS`,
+  `GET /settings/legal/{slug}` per tab.
+- New shared **`src/components/LegalMarkdown.tsx`**, ported verbatim
+  from the web's `frontend/src/components/LegalMarkdown.tsx`: renders
+  the policy editor's markdown-lite subset (headings, bullets, bold,
+  email links) as React Native elements - no HTML passthrough, since
+  policy text is admin-edited.
+- **Two more vacuous-test catches, same family as FR-1001's**, both in
+  the markdown parsing test: a misparsed `"# The Service"` heading
+  falls through to a plain paragraph at the *same block testID*,
+  literal `"#"` prefix and all - a `{ exact: false }` substring check
+  against that testID still passed, because `"The Service"` is still
+  in there. Same shape for bullets (`"- Be nice"` misparsed merges into
+  a paragraph that still contains `"Be nice"`). Fixed the heading
+  check to an exact match, and the bullets check by giving each bullet
+  its own per-item testID - diagnosed and fixed by deliberately
+  breaking each parse branch one at a time and confirming failure
+  before moving on, per `docs/Rules.md` → "Process". Worth remembering
+  for any future markdown/parsing test in this codebase: a misparsed
+  line often lands at the same container with an overlapping substring,
+  so container-level checks need exact matches or per-item testIDs, not
+  loose substring checks against shared content.
+
+**Next step:** the user asked directly whether a connected device was
+being checked this session - it wasn't, every FR since FR-1001 was
+jest-only. Doing a live on-device smoke test now before picking the
+next feature.
+
 ## Session 6 (cont'd) — 2026-11-05 — FR-1101 passing; FR-402 confirmed practically blocked
 
 **Did:**
