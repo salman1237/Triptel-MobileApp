@@ -4,6 +4,40 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 6 (cont'd) — 2026-11-05 — FR-401 passing
+
+**Did:**
+- **FR-401 eSIM QR component → passing** (`b84d702`). `src/components/EsimQr.tsx` -
+  ported from the backend's `qr_branding.py` and the web's `EsimQr.tsx`:
+  error correction H, `LOGO_RATIO = 0.22`, a circular white backing disc
+  behind the logo (solved `logoBorderRadius` so `react-native-qrcode-svg`'s
+  own disc-radius formula renders a true circle, not a rounded square, for
+  any ring margin), the app icon (not the wordmark) as the logo.
+- **The damage-tolerance test Rules.md requires** ("crop/noise the rendered
+  image, confirm it still decodes") can't literally rasterize this
+  component's SVG output in Jest, so it instead builds the identical QR
+  module matrix via the `qrcode` package - the same encoder
+  `react-native-qrcode-svg` uses internally - at the component's actual
+  exported `ERROR_CORRECTION_LEVEL`/`LOGO_RATIO` constants (not re-typed
+  literals), punches out the same share of it a real logo would cover,
+  adds deterministic pixel noise simulating a creased/photographed
+  printout, and decodes it with `jsqr`. A built-in negative control
+  (level M, same logo coverage) must fail the same scenario - this is the
+  exact incident `docs/Rules.md` describes.
+- Proved all 4 assertions non-vacuous: downgrading `ERROR_CORRECTION_LEVEL`
+  to M, raising `LOGO_RATIO` to 0.55, and breaking the circular-radius
+  formula each correctly failed the corresponding test, then reverted.
+- Logged in `DECISIONS.md`: the logo source is the bundled
+  `assets/icon.png`, not the web's dynamic `publicSettings.favicon` -
+  that settings fetch is FR-1202 (not started yet). Revisit once FR-1202
+  ships.
+- `make check` first failed on a missing `@types/qrcode` declaration
+  (added as a devDependency, test-only).
+
+**Next step:** FR-401 unblocks FR-402 (My eSIMs), FR-307 (purchase
+success), FR-404 (receipt PDF), FR-501 (public tracking) - all reuse this
+component.
+
 ## Session 6 (cont'd) — 2026-11-05 — FR-902 passing
 
 **Did:**
