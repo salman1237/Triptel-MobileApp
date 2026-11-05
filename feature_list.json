@@ -53,7 +53,7 @@
     { "id": "FR-1001", "title": "Profile screen", "behavior": "User sees their profile, can edit phone/WhatsApp, and sign out", "verification": "npm test -- __tests__/profile/overview.test.tsx", "state": "passing", "evidence": "48b518b" },
     { "id": "FR-1002", "title": "KYC submission", "behavior": "User can submit NID number + front (required) + back (optional) photo and see Pending/Rejected status", "verification": "npm test -- __tests__/profile/kyc.test.tsx", "state": "not_started", "evidence": null },
 
-    { "id": "FR-1101", "title": "Ticket list", "behavior": "User sees their support tickets with subject, reference, status, last-message date", "verification": "npm test -- __tests__/support/ticket-list.test.tsx", "state": "not_started", "evidence": null },
+    { "id": "FR-1101", "title": "Ticket list", "behavior": "User sees their support tickets with subject, reference, status, last-message date", "verification": "npm test -- __tests__/support/ticket-list.test.tsx", "state": "passing", "evidence": "3ffd420" },
     { "id": "FR-1102", "title": "New ticket", "behavior": "User can open a ticket with subject/category/body and up to 5 attachments", "verification": "npm test -- __tests__/support/new-ticket.test.tsx", "state": "not_started", "evidence": null },
     { "id": "FR-1103", "title": "Ticket thread", "behavior": "User can reply with attachments and close a ticket; a resolved ticket reopens on reply", "verification": "npm test -- __tests__/support/ticket-thread.test.tsx", "state": "not_started", "evidence": null },
 

@@ -4,6 +4,46 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 6 (cont'd) — 2026-11-05 — FR-1101 passing; FR-402 confirmed practically blocked
+
+**Did:**
+- **FR-1101 Ticket list → passing** (`3ffd420`). `app/support/index.tsx` -
+  subject, reference, status badge (customer-facing labels ported from
+  the web's `TicketThread.tsx` `STATUS_STYLE`), last-message date, plus
+  loading/empty/error states, a "New ticket" button, and per-row
+  navigation - all pointing at `FR-1102`/`FR-1103` routes that don't
+  exist yet (same forward-reference pattern as FR-901/902's "Next"
+  links). `src/api/support.ts` matches `serialize_ticket()` in
+  `app/services/support_svc.py` exactly.
+- New shared module **`src/lib/datetime.ts`**, ported verbatim from the
+  web's `frontend/src/lib/datetime.ts`: `Intl.DateTimeFormat` helpers
+  pinned to `Asia/Dhaka`, not the device's own timezone - the same
+  reasoning the web app documents (a traveller reading an eSIM's expiry
+  the moment their phone picks up a foreign timezone must see the same
+  date the backend emailed them). Available for any future FR needing
+  date/time display.
+- The test caught a real **ICU locale quirk**, not a code bug: Node/Jest's
+  `en-GB` locale abbreviates September as "Sept" (4 letters) while every
+  other month uses 3 - the test's own expected string was wrong, not
+  `formatDate()`.
+- Proved all 6 assertions non-vacuous (status label text, the
+  last-message-date field actually used, the empty-state condition, the
+  error-state condition, and both navigation targets) - each deliberately
+  broken one at a time and confirmed to fail, then reverted.
+- **FR-402 (My eSIMs) investigated and found practically blocked**, the
+  same shape as FR-305/FR-306: confirmed live against
+  `GET /orders/my-esims` on `beta.triptel.co` that the QA account
+  (`qa.mobile.login@triptel-test.dev`) has zero eSIM orders (`[]`).
+  Building it now would mean its own Maestro verification
+  (`flows/view-esim-qr.yaml`) couldn't actually exercise the tap-to-reveal
+  QR / copy LPA / share behavior the FR describes - the exact kind of
+  thin verification `docs/Rules.md` guards against. Left at
+  `"not_started"` (same convention as FR-305/FR-306/FR-1002 - not
+  formally `"blocked"` in the JSON, just documented here).
+
+**Next step:** FR-1201 (Legal documents) - jest-only, self-contained, not
+blocked by checkout or a stakeholder decision.
+
 ## Session 6 (cont'd) — 2026-11-05 — FR-401 passing
 
 **Did:**
