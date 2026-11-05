@@ -36,3 +36,15 @@ export type CurrencyRate = {
 export function getRates(): Promise<CurrencyRate[]> {
   return apiFetch<CurrencyRate[]>('/settings/rates');
 }
+
+export type LegalDocument = {
+  slug: string;
+  title: string;
+  body: string;
+  updated_at: string | null;
+};
+
+// Public. 404s if the slug isn't one of the six LEGAL_TITLES keys on the backend.
+export function getLegalDocument(slug: string): Promise<LegalDocument> {
+  return apiFetch<LegalDocument>(`/settings/legal/${encodeURIComponent(slug)}`);
+}
