@@ -4,6 +4,39 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 6 — 2026-11-05 — FR-1001 passing; FR-1002 confirmed blocked, FR-901 next
+
+**Did:**
+- **FR-1001 Profile screen → passing** (`48b518b`). `app/(tabs)/profile.tsx`:
+  avatar/initial fallback, name/username/role badge, Google-linked badge,
+  email + verified badge, spendable wallet mini-view (DEFAULT+REWARD,
+  excluding frozen and COMMISSION, via `formatPrice`), editable
+  phone/WhatsApp (`PUT /auth/me/preferences`), sign out. Registered as a
+  tab in `app/(tabs)/_layout.tsx`.
+- Caught and fixed a **vacuous test**: the wallet-balance test originally
+  asserted `.toContain('15.00')` against a correctly-computed €15.00
+  balance - but a broken filter that also included the €100 COMMISSION
+  wallet produces "115.00", which *also* contains the substring "15.00",
+  so the revert-check would have silently passed. Fixed to an exact
+  `.toBe('৳15.00')`, confirmed it now genuinely fails on the broken filter,
+  then audited every other `.toContain()` numeric assertion in the suite
+  for the same overlap risk (none had it).
+- Confirmed **FR-1002 (KYC)** is explicitly flagged in
+  `docs/Functional_Requirements.md` ("Confirm with stakeholders whether
+  this ships in the first release or is deferred") - not attempting it
+  without that decision, per the same "don't guess silently" discipline
+  as FR-305/FR-306. Still blocked, unchanged from prior session.
+- Started **FR-901** (Compatible-phones / eSIM-support check) - static
+  content, no API call per the FR doc. Researching the web app's
+  equivalent page/component to port its device list, dial-check
+  instructions, and video embed verbatim rather than inventing content.
+
+**Next step:** finish FR-901 using the ported web content, verify, commit,
+flip to passing. Then FR-902 (eSIM setup guide, also static/no-API) is a
+natural follow-on. FR-1301 (tab bar) becomes more worth doing once a few
+more tabs exist. FR-305/FR-306/FR-1002 remain the three blocked items -
+do not attempt without new information from the user.
+
 ## Session 5 (cont'd) — 2026-11-05 — FR-303, FR-304 passing; genuinely blocked on FR-305/FR-306
 
 **Did:**

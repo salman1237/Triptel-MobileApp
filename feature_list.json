@@ -50,7 +50,7 @@
     { "id": "FR-901", "title": "Compatible-phones / eSIM-support check", "behavior": "User sees the curated device list and the *#06#/EID check guide with the embedded video", "verification": "npm test -- __tests__/guides/compatible-phones.test.tsx", "state": "not_started", "evidence": null },
     { "id": "FR-902", "title": "eSIM setup guide", "behavior": "User sees step-by-step iOS/Android install instructions and a troubleshooting checklist", "verification": "npm test -- __tests__/guides/setup-guide.test.tsx", "state": "not_started", "evidence": null },
 
-    { "id": "FR-1001", "title": "Profile screen", "behavior": "User sees their profile, can edit phone/WhatsApp, and sign out", "verification": "npm test -- __tests__/profile/overview.test.tsx", "state": "not_started", "evidence": null },
+    { "id": "FR-1001", "title": "Profile screen", "behavior": "User sees their profile, can edit phone/WhatsApp, and sign out", "verification": "npm test -- __tests__/profile/overview.test.tsx", "state": "passing", "evidence": "48b518b" },
     { "id": "FR-1002", "title": "KYC submission", "behavior": "User can submit NID number + front (required) + back (optional) photo and see Pending/Rejected status", "verification": "npm test -- __tests__/profile/kyc.test.tsx", "state": "not_started", "evidence": null },
 
     { "id": "FR-1101", "title": "Ticket list", "behavior": "User sees their support tickets with subject, reference, status, last-message date", "verification": "npm test -- __tests__/support/ticket-list.test.tsx", "state": "not_started", "evidence": null },
