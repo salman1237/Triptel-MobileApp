@@ -6,17 +6,20 @@ import { useAuth } from '../state/AuthContext';
 import { checkDiscountCode, previewDiscount } from '../api/discounts';
 import type { DiscountCheckResult } from '../api/discounts';
 import { getMyWallets } from '../api/wallets';
+import { checkoutWithWallet } from '../api/orders';
+import { waitForOrder } from '../lib/waitForOrder';
 import { ApiError } from '../lib/apiClient';
 import DiscountCodeBox from './DiscountCodeBox';
 import PaymentMethodChooser from './PaymentMethodChooser';
+import CheckoutFlowModal, { type CheckoutFlowStage } from './CheckoutFlowModal';
 
-// FR-301/FR-302/FR-303/FR-304 - the "choose" state of the web's
-// PackageBrowser.tsx state machine (docs/Architecture.md -> "The checkout
-// state machine"). Display, filter, discount-code pre-check/exact preview,
-// and the wallet-vs-gateway *decision* only for now - actually charging
-// something (FR-305 wallet checkout, FR-306 gateway checkout) is a later
-// FR; this component grows into the rest of that state machine then, it
-// isn't redesigned.
+// FR-301/FR-302/FR-303/FR-304/FR-305 - the "choose" and wallet-checkout
+// states of the web's PackageBrowser.tsx state machine
+// (docs/Architecture.md -> "The checkout state machine"). Display, filter,
+// discount-code pre-check/exact preview, the wallet-vs-gateway decision,
+// and (FR-305) actually charging the wallet and reaching a
+// success/preparing/error outcome. The gateway path itself (FR-306) is
+// still a later FR - choosing it here only records the choice.
 export type PackageBrowserProps = {
   products: Product[];
 };
@@ -82,9 +85,13 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
     null
   );
   const [goingToGatewayProductId, setGoingToGatewayProductId] = useState<string | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<{ productId: string; method: 'WALLET' | 'GATEWAY' } | null>(
-    null
-  );
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<{ productId: string; method: 'GATEWAY' } | null>(null);
+
+  // FR-305 - the wallet-checkout execution state (working -> preparing |
+  // success | error). Kept separate from `chooserState` above: the chooser
+  // is "which method", this is "how the chosen one (wallet) is going".
+  const [flow, setFlow] = useState<CheckoutFlowStage | null>(null);
+  const [flowProduct, setFlowProduct] = useState<Product | null>(null);
 
   const dataSizeOptions = useMemo(() => {
     const seen = new Map<string, number>();
@@ -216,8 +223,76 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
 
   function handleChoosePaymentMethod(method: 'WALLET' | 'GATEWAY') {
     if (!chooserState) return;
-    setSelectedPaymentMethod({ productId: chooserState.product.id, method });
+    const { product } = chooserState;
     setChooserState(null);
+    if (method === 'GATEWAY') {
+      // FR-306 (actually starting the gateway flow) isn't built yet - this
+      // only records the choice.
+      setSelectedPaymentMethod({ productId: product.id, method: 'GATEWAY' });
+      return;
+    }
+    payByWallet(product);
+  }
+
+  // FR-305 - ported from the web's payByWallet() (docs/Architecture.md ->
+  // "The checkout state machine"): POST /orders/checkout, then poll briefly
+  // for the common case (eSIM lands within a few seconds); on timeout, show
+  // "preparing" (not a failure - see "Lessons from the web app") and keep
+  // polling quietly in the background so the screen can still upgrade to
+  // success if the customer is still looking at it.
+  async function payByWallet(product: Product) {
+    if (!token) return;
+    setFlowProduct(product);
+    setFlow({ stage: 'working' });
+    const appliedCode = checkedOk ? discountCode.trim() : undefined;
+    try {
+      const accepted = await checkoutWithWallet(token, product.id, appliedCode);
+      let order;
+      try {
+        order = await waitForOrder(token, accepted.id, { timeoutMs: 12000 });
+      } catch {
+        setFlow({ stage: 'preparing' });
+        waitForOrder(token, accepted.id, { timeoutMs: 170000 })
+          .then((later) => {
+            if (later.status !== 'COMPLETED') return;
+            setFlow((prev) => (prev && prev.stage === 'preparing' ? { stage: 'success', order: later } : prev));
+          })
+          .catch(() => {});
+        return;
+      }
+      if (order.status === 'COMPLETED') {
+        setFlow({ stage: 'success', order });
+      } else {
+        setFlow({
+          stage: 'error',
+          message: t(
+            'checkout',
+            'wallet_checkout_provisioning_failed',
+            "We couldn't set up this eSIM with the network. The full amount has been refunded to your wallet."
+          ),
+        });
+      }
+    } catch (err) {
+      setFlow({
+        stage: 'error',
+        message:
+          err instanceof ApiError && typeof err.detail === 'string'
+            ? err.detail
+            : t('checkout', 'wallet_checkout_network_error', 'Purchase failed. If your wallet was charged, it has been refunded.'),
+      });
+    }
+  }
+
+  function handleCloseFlow() {
+    setFlow(null);
+    setFlowProduct(null);
+  }
+
+  function handleRetryFlow() {
+    if (!flowProduct) return;
+    const product = flowProduct;
+    setFlow(null);
+    handleBuyNow(product);
   }
 
   function renderChip(
@@ -343,9 +418,7 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
 
         {selectedMethodForThis && (
           <Text style={styles.gatewayNote} testID={`package-selected-method-${item.id}`}>
-            {selectedMethodForThis === 'WALLET'
-              ? t('checkout', 'buy_now_selected_wallet', 'Paying with wallet balance')
-              : t('checkout', 'buy_now_selected_gateway', 'Paying with card/mobile banking')}
+            {t('checkout', 'buy_now_selected_gateway', 'Paying with card/mobile banking')}
           </Text>
         )}
       </View>
@@ -414,6 +487,8 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
           onCancel={() => setChooserState(null)}
         />
       )}
+
+      <CheckoutFlowModal flow={flow} onClose={handleCloseFlow} onRetry={handleRetryFlow} />
     </View>
   );
 }

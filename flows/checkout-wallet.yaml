@@ -1,0 +1,67 @@
+# FR-305 - Wallet checkout.
+#
+# Exercises a REAL purchase against the staging backend (beta.triptel.co):
+# debits the cheapest available Bangladesh package (~1.85 EUR at the time
+# this was written) from whichever wallet is signed in, and provisions a
+# real eSIM order through the live supplier integration. Confirmed
+# staging-safe with the user before writing this flow - see DECISIONS.md.
+# Re-check the product id below against GET /catalog/destinations/bangladesh
+# if this flow starts failing on an unrelated "product not found" error -
+# catalog contents on staging can change.
+#
+# Assumes an existing signed-in session (stopApp: false preserves it) -
+# this flow does NOT log in. The account used to develop/verify this flow
+# was signed in via Google Sign-In (FR-103), which Maestro can't reliably
+# script itself (it needs a tap through a live native account picker) -
+# see DECISIONS.md. Sign in manually on the device before running this.
+#
+# Runs against the dev-client build (co.triptel.app / triptel:// scheme),
+# not Expo Go - required since FR-103, unlike the older login.yaml/
+# register.yaml flows which still target Expo Go's exp:// scheme.
+appId: co.triptel.app
+---
+- launchApp:
+    stopApp: false
+- openLink: "triptel://explore/bangladesh"
+- scrollUntilVisible:
+    element:
+      id: "package-buy-now-3c9c7567-bd40-462f-bb13-32e6c62f0b90"
+    direction: DOWN
+- tapOn:
+    id: "package-buy-now-3c9c7567-bd40-462f-bb13-32e6c62f0b90"
+- assertVisible:
+    id: "payment-method-chooser"
+- tapOn:
+    id: "payment-method-wallet"
+- assertVisible:
+    id: "checkout-working"
+# The short poll window (waitForOrder's first, ~12s) plus margin for the
+# modal animation and a slow network - after this, the flow must have
+# settled into preparing or success, never still spinning.
+- extendedWaitUntil:
+    notVisible:
+      id: "checkout-working"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: "checkout-success"
+    commands:
+      - assertVisible:
+          id: "checkout-success-order-no"
+      - tapOn:
+          id: "checkout-success-close"
+- runFlow:
+    when:
+      visible:
+        id: "checkout-preparing"
+    commands:
+      - assertVisible:
+          id: "checkout-preparing-close"
+      - tapOn:
+          id: "checkout-preparing-close"
+# The one non-negotiable assertion (docs/Architecture.md -> "Lessons from
+# the web app"): a still-provisioning order must never present as a
+# failure. success or preparing both satisfy this flow; error never does.
+- assertNotVisible:
+    id: "checkout-error"

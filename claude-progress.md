@@ -4,6 +4,49 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 8 — 2026-11-05 — FR-305 implemented, manually verified live, blocked on Maestro/Vivo for the formal flip
+
+**Did:**
+- **FR-305 wallet checkout** - `src/api/orders.ts` (checkout + poll, with the
+  same Decimal-string-to-number conversion fix as `wallets.ts`),
+  `src/lib/waitForOrder.ts` (ported verbatim from the web), and
+  `src/components/CheckoutFlowModal.tsx` (working/preparing/success/error),
+  wired into `PackageBrowser.tsx`'s wallet path. 5 new tests in
+  `payment-method-chooser.test.tsx`, all proven non-vacuous. Typecheck and
+  lint clean.
+- **Manually verified live, end-to-end, on the Vivo test device, against the
+  real staging backend**: bought the cheapest Bangladesh package (~1.85 EUR)
+  with the real wallet funded earlier this session - saw the real
+  payment-method chooser, the real "Setting up your eSIM" working state, and
+  a real success screen with a real order number
+  (`ORD-20261105-E6B7E9`). The implementation works.
+- **FR-305 is NOT flipped to `passing`** - its own verification command
+  (`maestro test flows/checkout-wallet.yaml`) hit a reproducible
+  `DeviceServerDiedException` on every `launchApp` call. Root-caused as far
+  as reasonably possible this session: NOT Vivo-specific (identical failure
+  on the Tecno device too), NOT app-specific (identical failure against
+  Expo Go, the exact app the previously-working `flows/login.yaml` used),
+  NOT an adb/OS issue (the equivalent raw `adb shell am force-stop` +
+  `am start` commands both return in <0.2s). It's specifically Maestro's
+  own on-device driver hanging for exactly 120s inside `launchApp`, on
+  every app/device combination available - a genuine Maestro regression/bug
+  in this install (v2.12.1), not anything about FR-305's code or flow. Full
+  diagnostic trail in `DECISIONS.md`. Also logged in as `salman2033`
+  (SUPER_ADMIN, well-funded wallet, password-based) on the Tecno device -
+  a better long-term account for this flow than the Google-linked one.
+- `flows/checkout-wallet.yaml` added - assumes an already-signed-in session
+  (the dedicated QA account has no wallet funds; the user's recharge went to
+  their personal Google-linked account instead, which Maestro can't easily
+  log into - see `DECISIONS.md`).
+
+**Next step:** resolve the Maestro `launchApp` blocker (try the Tecno
+device or an emulator) so FR-305's actual verification command can run to
+completion and flip it. The code itself is done and confirmed working -
+this is purely a test-infrastructure gap. Once resolved, continue with
+FR-306's actual mobile-side screen, FR-307/308/309 (success/preparing/
+failure screen polish, building on `CheckoutFlowModal.tsx`), and FR-305
+remaining blocked for a *different* reason (QA wallet funding).
+
 ## Session 7 — 2026-11-05 — FR-103 passing; FR-306 backend prerequisite done
 
 **Did:**
@@ -45,14 +88,38 @@ Read this first every session. Newest entry on top.
   a regression from the `payments.py` change (that test exercises the
   wallet-checkout path, not the gateway code touched this session).
 
-**Next step:** Google Cloud Console registration is still needed before
-Google Sign-In can actually complete live - package `co.triptel.app`,
-SHA-1 `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
-(the debug keystore's fingerprint). The dev-client APK build itself is
-being retried now that disk space has recovered. FR-306's mobile-side
-flow (the actual `openAuthSessionAsync` screen) is still open. FR-305
-(wallet checkout) remains blocked on how to credit the QA wallet - the
-user chose "give me admin/DB access" but hasn't yet provided credentials.
+**Dev-client build: fixed and confirmed working.** The Windows long-path
+build failure (8 attempts, `DECISIONS.md` has the full history) was
+actually a Ninja version problem, not a Windows OS setting - the SDK's
+default CMake 3.22.1 bundles Ninja 1.10.2, which has no Windows long-path
+support at all. Fix: `app.config.js` forces `android.cmakeVersion =
+'3.31.6'` (bundles Ninja 1.12.1) via `expo-build-properties`, scoped to
+`win32` only so EAS's Linux cloud builds are untouched. That SDK package
+had to be installed by hand (no local `sdkmanager`) - downloaded directly
+from Google's SDK repository and given a hand-derived `package.xml` so
+AGP recognizes it. `gradlew.bat assembleDebug` then completed with
+`BUILD SUCCESSFUL` (attempt #9, ~40 min clean build). Installed the APK
+on a physical Vivo device (`10EF1302BJ000R5`) via `adb`, launched it,
+connected to a freshly-started Metro, and **confirmed the FR-103 Google
+Sign-In button live on-device**: it renders correctly on the login screen
+and tapping it opens the native Google account picker without crashing -
+proof the native module, the dev-client build, and the web-client-ID
+config are all wired up correctly. First actual sign-in attempt failed
+with the expected error ("Google sign-in failed. Please try again.") -
+no crash, a clean caught JS error consistent with Play Services'
+`DEVELOPER_ERROR` (status 10), because the Android OAuth client
+(package `co.triptel.app` + the debug keystore's SHA-1) wasn't yet
+registered in Google Cloud Console. **User registered it and retried -
+sign-in now completes successfully end-to-end**: signed in live as a
+real Google account, Profile screen shows "Linked with Google", verified
+email, and wallet balance rendering correctly (৳70,500.00, confirming the
+earlier wallet-balance NaN fix holds on a real funded account, not just
+in tests). **FR-103 is fully live-verified, not just build-verified.**
+
+**Next step:** user has recharged the test wallet with real funds -
+**FR-305 (wallet checkout) is now unblocked** and can start. FR-306's
+mobile-side flow (the actual `openAuthSessionAsync` screen) is still
+open.
 
 ## Session 6 (cont'd) — 2026-11-05 — FR-1201 passing
 

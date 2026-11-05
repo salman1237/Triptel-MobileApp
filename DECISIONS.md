@@ -5,6 +5,208 @@ Each entry: what was decided, why, and what would make it worth revisiting.
 
 ---
 
+## 2026-11-05 — FR-305 wallet checkout: implementation done and manually verified live; formal Maestro verification blocked on this Vivo device
+
+**Status:** `src/api/orders.ts`, `src/lib/waitForOrder.ts`, `src/components/CheckoutFlowModal.tsx`,
+and the wiring into `PackageBrowser.tsx`'s `payByWallet()` are written, typecheck
+clean, lint clean, and `__tests__/checkout/payment-method-chooser.test.tsx` has
+5 new FR-305 tests (9/9 passing) - each proven non-vacuous by deliberately
+commenting out the `payByWallet(product)` call and confirming all 5 failed,
+then restoring it. **`feature_list.json` still shows FR-305 as `not_started`**,
+per the hard rule that only the FR's own verification command going from fail
+to pass flips it - that command (`maestro test flows/checkout-wallet.yaml`)
+has not yet passed, for reasons below.
+
+**Manually verified working, live, on-device, against the real staging
+backend** (`beta.triptel.co`) - confirmed the user's choice to use the
+Google-linked personal account's wallet rather than the dedicated QA account
+(see next entry). Bought "Bangladesh, 1 Day, 500MB/day" (~1.85 EUR) via
+`adb shell input tap` sequences: payment-method chooser opened with the real
+wallet balance, `checkout-working` ("Setting up your eSIM") rendered, and it
+resolved to `checkout-success` with a real order number
+(`ORD-20261105-E6B7E9`) within the short poll window - the whole
+working -> success path, end to end, for real money and a real supplier
+order.
+
+**Why the Maestro flow itself (`flows/checkout-wallet.yaml`) couldn't be run
+to completion:** every `launchApp` command against `co.triptel.app` on this
+device (serial `10EF1302BJ000R5`, a Vivo) hung for exactly 120s and died with
+`DeviceServerDiedException` / `DEADLINE_EXCEEDED` - 5 consecutive identical
+failures, not the already-documented random USB/Wi-Fi flakiness (see the
+Maestro CLI entry below): that flakiness looks different (connection drops
+mid-flow, varies run to run) and responds to a plain retry; this did not,
+across multiple retries, an adb-server restart, and freeing ~2GB of RAM by
+stopping stale Gradle daemons. **Other Maestro commands against the same
+device/connection work fine** - `maestro --device 10EF1302BJ000R5 hierarchy`
+returned a full UI tree instantly - so the on-device driver connection
+itself is healthy; the fault is specific to `launchApp` against this app on
+this device. No Maestro driver/instrumentation package or registered
+instrumentation shows up via `pm list packages -u` / `pm list instrumentation`
+on this device at all, unlike (presumably) the Tecno device `flows/login.yaml`
+was originally proven on - worth checking first if this comes up again.
+
+**Update - same session, root-caused further:** tried the Tecno device next
+(where `flows/login.yaml` was originally proven) - **identical failure**,
+ruling out "Vivo-specific" entirely. Then isolated further: a minimal
+one-line flow (`launchApp` + `takeScreenshot`, no other steps) against
+**`host.exp.exponent` (Expo Go)** - the exact app `flows/login.yaml` was
+built and proven against - **also hung identically**, on the Tecno device.
+So this isn't about `co.triptel.app`, the dev-client switch, or either
+device - it reproduces for `launchApp` against *any* app, on *any* of the
+two devices available. Confirmed `maestro --device ... hierarchy` (a
+different command, no app launch involved) returns instantly against the
+same device/connection, so the on-device driver connection itself is
+healthy - the fault is inside `launchApp` specifically. Reading the
+timestamped log: ~20 permission-grant attempts (all expected no-ops,
+unrelated) complete in under a second, then `Stopping <app> during launch`
+logs immediately, then **nothing for exactly 120.000s** until
+`DeviceServerDiedException`. Tested the equivalent raw commands directly -
+`adb shell am force-stop <pkg>` and `adb shell am start -n <pkg>/<activity>`
+- both return in under 0.2s. So the OS-level primitives are fast; whatever
+Maestro's on-device driver does internally after issuing them (most likely
+waiting on its own "app has settled" / idle-detection check, probably via
+an injected AccessibilityService) is what hangs, every time, regardless of
+app or device. No stale cached Android driver artifacts found under
+`~/.maestro/deps` to clear (that directory only holds iOS-related tools on
+this machine). Maestro version: 2.12.1.
+
+**Not resolved this session** - this is a genuine, reproducible bug/
+regression in this Maestro install's `launchApp` implementation, not an app,
+flow, or device problem. Did not keep guessing blindly past this point per
+standing guidance (diagnose root cause, don't retry forever) - reported to
+the user with the full trail above instead.
+
+**Revisit if:** picking this back up - try `maestro --version` against a
+freshly reinstalled/different Maestro version (2.12.1 may have a known
+regression), or test on a clean Android emulator (removes any lingering
+on-device AccessibilityService/UiAutomation state as a variable). Once
+`launchApp` works again, `flows/checkout-wallet.yaml` itself needs no
+changes - it was never reached due to this earlier blocker. A good, ready,
+password-based account for it going forward: `salman2033` (logged in on
+the Tecno device this session, SUPER_ADMIN role, verified email, wallet
+balance confirmed well-funded - see conversation) - script-friendly unlike
+the Google-linked account below, though still a real personal account, not
+a disposable QA one.
+
+## 2026-11-05 — FR-305 Maestro flow: personal Google-linked account instead of the dedicated QA account
+
+**Decided (user's explicit choice):** `flows/checkout-wallet.yaml` assumes an
+already-signed-in session and does not log in itself, unlike
+`flows/login.yaml`/`flows/register.yaml`.
+
+**Why:** the dedicated QA account (`qa.mobile.login@triptel-test.dev`) that
+earlier Maestro flows use had a 0 EUR wallet balance; the user's wallet
+recharge (this session) went to their personal Google-linked account
+instead, and Google Sign-In's native account-picker can't be reliably
+scripted in Maestro. Asked the user directly (3 options: fund the QA account
+too, give credentials to fund it myself, or use the personal account and
+skip scripting login) - they chose to use the personal account.
+
+**Revisit if:** this flow is going to be run repeatedly/unattended (e.g. a
+future CI setup) - a script-friendly, password-based QA account with its own
+standing wallet balance would be far more durable than depending on a
+personal account staying signed in and funded on whatever device runs this.
+
+---
+
+## 2026-11-05 — Windows native-build path length: CMake 3.31.6 via expo-build-properties (superseded the buildDir-relocation approach below)
+
+**Decided (final, confirmed working):** `app.config.js` sets
+`android.cmakeVersion = '3.31.6'` through the `expo-build-properties`
+config plugin, scoped to `process.platform === 'win32'` only (EAS's Linux
+cloud builders don't need or have this package). CMake 3.31.6 bundles
+Ninja 1.12.1, which supports Windows long paths; the SDK's default CMake
+3.22.1 bundles Ninja 1.10.2, which does not, regardless of the OS-level
+`LongPathsEnabled=1` registry setting (already confirmed on at every step
+below - it never mattered, because the limitation is in Ninja, not
+Windows).
+
+No `sdkmanager`/`cmdline-tools` exists on this machine to install the
+CMake 3.31.6 SDK package the normal way, so it was installed manually:
+downloaded `cmake-3.31.6-windows.zip` directly from
+`https://dl.google.com/android/repository/` (URL found by fetching and
+parsing that repository's `repository2-3.xml` manifest), extracted to
+`$env:LOCALAPPDATA\Android\Sdk\cmake\3.31.6\`, and given a `package.xml`
+hand-derived from the working `cmake\3.22.1\package.xml` (same license
+block, `path="cmake;3.31.6"`, revision `3.31.6`) so AGP recognizes it as
+an installed SDK component rather than just binaries on disk.
+
+**Confirmed end-to-end on 2026-11-05**: `gradlew.bat assembleDebug`
+completed with `BUILD SUCCESSFUL` (attempt #9; the first 8 all failed on
+this exact issue). The resulting APK was installed on a physical device
+(Vivo, serial `10EF1302BJ000R5`) via `adb`, the app launched, connected to
+Metro, and the FR-103 Google Sign-In button on the login screen opened the
+native account picker without crashing - the dev-client build this whole
+investigation was blocked on is now provably working.
+
+**Superseded below:** everything in the rest of this entry (relocating
+`react-native-gesture-handler`'s and `:app`'s `buildDir` via a
+`subprojects` block) was the path tried *before* the real fix was found.
+It is kept verbatim as a record of what was ruled out and why - do not
+reapply it; `android/build.gradle` has been reverted to its clean,
+auto-generated state and the `expo-build-properties` plugin is the only
+Windows-specific override now in place, applied automatically on every
+`expo prebuild` since it lives in `app.config.js`, not in a gitignored,
+hand-edited Gradle file.
+
+---
+
+**Historical (ruled out) - original entry follows unedited:**
+
+**Decided:** `android/build.gradle` relocates `react-native-gesture-handler`'s
+and `:app`'s `buildDir` to `D:/rnb/<module-name>` (outside the project
+tree), via a `subprojects` block scoped to those two modules by name -
+not `allprojects`.
+
+**Why:** the local dev-client Android build failed four times in a row
+before landing on this:
+1. Disk space (resolved separately - unrelated pre-existing machine issue).
+2. `ninja: error: Stat(...) Filename longer than 260 characters` compiling
+   `react-native-gesture-handler`'s New Architecture codegen output
+   (`.../react/renderer/components/rngesturehandler_codegen/...` - the
+   *relative* portion of that one path alone measured 274 characters,
+   before even adding this project's own absolute path prefix).
+3. Tried disabling New Architecture first (`newArchEnabled: false`) -
+   **not viable**: React Native 0.82+ hard-ignores that setting with an
+   explicit warning ("not supported anymore... will run with New
+   Architecture enabled by default"), confirmed by an actual build
+   attempt, not assumed.
+4. First fix attempt relocated **every** subproject's `buildDir`
+   (`allprojects { buildDir = ... }`) - too blunt: it broke the React
+   Native Gradle plugin's autolinking step, which expects its generated
+   `autolinking.json` at a location relative to the *root* project's
+   default `buildDir` (`Failed to apply plugin 'com.facebook.react'...
+   generated/autolinking/autolinking.json (The system cannot find the
+   path specified)`).
+5. Second fix attempt scoped the relocation to just
+   `react-native-gesture-handler`'s own module build - that cleared the
+   module's own CMake build, but `:app:buildCMakeDebug` then hit the
+   *identical* "Filename longer than 260 characters" error separately:
+   the app module's own combined/autolinked native build independently
+   references gesture-handler's codegen source files from their
+   original `node_modules` location (not through gesture-handler's
+   relocated `buildDir`), so it has its own, separate instance of the
+   same problem.
+6. **This fix**: relocate both `react-native-gesture-handler`'s *and*
+   `:app`'s `buildDir`. `subprojects` (unlike `allprojects`) already
+   excludes the root project automatically, so this still doesn't touch
+   root's buildDir - confirmed safe by checking `rootProject.name` is
+   `'Triptel'` and matches the autolinking.json path from the earlier
+   failure (`D:\rnb\Triptel\generated\autolinking\...`), i.e. that
+   failure really was specifically about the *root* project, not `:app`.
+   Confirmed Windows's own long-path support (`LongPathsEnabled=1`) is
+   already on at the OS level, but `ninja` (CMake's backend here)
+   doesn't honor that opt-in regardless - a known, widely-reported
+   Windows + RN New Architecture pain point for this specific library.
+   No other native module's CMake build (reanimated, worklets, svg,
+   screens, expo-modules-core) has hit this in any attempt so far.
+
+**Caveat - not yet durable (superseded, see top of this entry):** this
+manual `android/build.gradle` edit did not survive `expo prebuild` and was
+never wired into a config plugin before the real fix (CMake 3.31.6) was
+found instead. It has since been reverted; `android/build.gradle` is back
+to its clean, regenerated state.
+
 ## 2026-11-05 — FR-306 ShurjoPay hand-off: custom-scheme deep link, backend changed
 
 **Decided** (user's explicit choice, see conversation): option 1 from
