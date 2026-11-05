@@ -4,6 +4,36 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 6 (cont'd) — 2026-11-05 — FR-901 passing
+
+**Did:**
+- **FR-901 Compatible-phones / eSIM-support check → passing** (`6805048`).
+  `app/guides/compatible-phones.tsx` - static content, no API call, ported
+  verbatim from the web's `frontend/src/app/guides/compatible-phones/page.tsx`:
+  the brand-grouped device list, the *#06#/EID dial-check copy, and the
+  manual iOS/Android fallback instructions.
+- Added `expo-video` for the embedded check-video (documented in
+  `docs/Technical_Requirements.md`). The video source is hardcoded to the
+  web app's own production static asset
+  (`https://triptel.co/guides/check-esim-support.mp4`) rather than derived
+  from `EXPO_PUBLIC_API_URL` - it's a public guide asset, not part of the
+  `/api/v1` backend the beta/production split applies to. Logged as a
+  judgment call in `DECISIONS.md`.
+- First `make check` run caught two real `eslint` `no-require-imports`
+  warnings in the test's `expo-video` jest mock (needed `require()` inside
+  the mock factory to reach `react`/`react-native` safely under Jest's
+  mock-hoisting rules) - fixed with scoped
+  `eslint-disable`/`eslint-enable` comments around just those two lines,
+  confirmed clean, then re-ran `make check` green (15 suites / 51 tests).
+- Proved all 4 of the new test's assertions non-vacuous: broke the EID
+  wording, removed the Samsung Galaxy device group, and swapped the
+  "next guide" navigation target one at a time, confirming each caused the
+  corresponding assertion (and only that one) to fail, then reverted.
+
+**Next step:** FR-902 (eSIM setup guide) is the natural sibling - also
+static content, no API call, same porting approach from the web's
+`frontend/src/app/guides/esim-setup-guide/page.tsx`.
+
 ## Session 6 — 2026-11-05 — FR-1001 passing; FR-1002 confirmed blocked, FR-901 next
 
 **Did:**
