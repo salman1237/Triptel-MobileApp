@@ -5,6 +5,27 @@ Each entry: what was decided, why, and what would make it worth revisiting.
 
 ---
 
+## 2026-11-05 — FR-401's `EsimQr` logo is the bundled `assets/icon.png`, not the dynamic branding settings
+
+**Decided:** `src/components/EsimQr.tsx` always uses the locally bundled
+`assets/icon.png` as the center logo, via a plain `require()`. The web's
+`EsimQr.tsx` instead reads `publicSettings.favicon || publicSettings.logo_light`
+from `GET /settings/public` at runtime, so an admin can swap the brand mark
+without a redeploy.
+
+**Why:** That dynamic branding source doesn't exist in this app yet - it's
+FR-1202 (App settings bootstrap), still `not_started`. FR-401's own behavior
+is about the QR's rendering safety (error correction H, 22% logo ratio,
+circular backing, decode-survival), not about where the logo image comes
+from, and the hard constraint is "app icon, not wordmark" - satisfied either
+way since `assets/icon.png` is literally configured as the app's own icon in
+`app.json`.
+
+**Revisit when:** FR-1202 ships. At that point `EsimQr` should likely accept
+an optional `logoUri` prop that callers pass from `publicSettings`, falling
+back to the bundled icon only if that settings fetch hasn't resolved yet -
+matching the web's fallback chain.
+
 ## 2026-11-05 — FR-901's embedded video is a hardcoded production web URL
 
 **Decided:** `app/guides/compatible-phones.tsx` points its `expo-video` player
