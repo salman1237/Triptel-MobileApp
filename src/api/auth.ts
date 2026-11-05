@@ -121,3 +121,22 @@ export function changePassword(
     body: { current_password: currentPassword, new_password: newPassword },
   });
 }
+
+export type PreferencesUpdate = {
+  // Both optional, matching the backend's PreferencesRequest (app/api/v1/auth.py)
+  // - omitted leaves a field alone, "" clears phone (it's optional everywhere).
+  preferred_currency?: string;
+  phone?: string;
+};
+
+export type PreferencesResult = {
+  status: string;
+  preferred_currency: string | null;
+  phone: string | null;
+};
+
+// Authenticated. FR-1001's phone/WhatsApp edit and the future currency
+// switcher (FR-1302) both go through this one endpoint.
+export function updatePreferences(authToken: string, update: PreferencesUpdate): Promise<PreferencesResult> {
+  return apiFetch<PreferencesResult>('/auth/me/preferences', { method: 'PUT', token: authToken, body: update });
+}

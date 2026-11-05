@@ -27,6 +27,10 @@ type AuthContextValue = AuthState & {
   signIn: (token: string, user: CurrentUser, mustChangePassword?: boolean) => Promise<void>;
   signOut: () => Promise<void>;
   clearMustChangePassword: () => void;
+  // Merges a partial server response (e.g. PUT /auth/me/preferences) into
+  // the signed-in user, so a screen that just saved a change doesn't need
+  // to call GET /auth/me again to see its own update reflected.
+  updateUser: (partial: Partial<CurrentUser>) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -82,6 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       clearMustChangePassword() {
         setState((prev) => ({ ...prev, mustChangePassword: false }));
+      },
+      updateUser(partial: Partial<CurrentUser>) {
+        setState((prev) => (prev.user ? { ...prev, user: { ...prev.user, ...partial } } : prev));
       },
     }),
     [state]
