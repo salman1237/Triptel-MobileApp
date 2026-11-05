@@ -4,6 +4,58 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 7 — 2026-11-05 — FR-103 passing; FR-306 backend prerequisite done
+
+**Did:**
+- **FR-103 Google Sign-In → passing** (`1b24310`).
+  `src/components/GoogleSignInButton.tsx` via
+  `@react-native-google-signin/google-signin`, configured with the
+  backend's existing `GOOGLE_CLIENT_ID` (the same OAuth client the web
+  app's Google Sign-In already uses) - wired into both `login.tsx` and
+  `register.tsx` through one shared component, since `POST /auth/google`
+  already covers both sign-in and sign-up.
+- Discovered mid-build that Expo's auth proxy (`auth.expo.io`) is
+  deprecated and current SDK 58 guidance for Google Sign-In requires a
+  real native module, which Expo Go can't run - had to switch the
+  project to an `expo-dev-client` build. `app.json` gained
+  `android.package`/`ios.bundleIdentifier` (`co.triptel.app`, a new
+  placeholder identity - logged in `DECISIONS.md`), `eas.json` added,
+  `react-native-worklets` installed (reanimated's now-separate peer
+  dependency, needed for the native build to even compile).
+- **FR-306's backend prerequisite is done** (separate repo,
+  `D:\eSim\backend`): `POST /payments/shurjopay/order-initiate` accepts
+  `mobile: bool`, marks the ShurjoPay reference `ORDERPAY-M-{id}` (no DB
+  migration - reuses the existing prefix-dispatch pattern), and the
+  callback redirects to the app's `triptel://payment-callback` custom
+  scheme instead of the web frontend when that marker is present. 4 new
+  backend tests added and proven non-vacuous (deliberately broken and
+  confirmed to fail) alongside the existing 14 ShurjoPay tests - all
+  passing. The actual mobile-side `openAuthSessionAsync` checkout flow
+  for FR-306 is still unbuilt - only its backend prerequisite shipped.
+- **Real infrastructure incident, not a code bug:** the first
+  dev-client build attempt failed after 1h47m with "No space left on
+  device" - drive D: (where this whole project and session live) hit 0
+  bytes free. Confirmed via disk measurement this wasn't caused by this
+  session's own build artifacts (~0.1 GB). User freed ~17GB and asked to
+  retry.
+- Also ran the full backend pytest suite (550 tests) under that same
+  heavy resource contention - one test
+  (`test_checkout_success_delivers_esim`) failed there but passed
+  cleanly in isolation afterward; confirmed as contention-flakiness, not
+  a regression from the `payments.py` change (that test exercises the
+  wallet-checkout path, not the gateway code touched this session).
+
+**Next step:** Google Cloud Console registration is still needed before
+Google Sign-In can actually complete live - package `co.triptel.app`,
+SHA-1 `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
+(the debug keystore's fingerprint). The dev-client APK build itself is
+being retried now that disk space has recovered. FR-306's mobile-side
+flow (the actual `openAuthSessionAsync` screen) is still open. FR-305
+(wallet checkout) remains blocked on how to credit the QA wallet - the
+user chose "give me admin/DB access" but hasn't yet provided credentials.
+
+## Session 6 (cont'd) — 2026-11-05 — FR-1201 passing
+
 ## Session 6 (cont'd) — 2026-11-05 — FR-1201 passing
 
 **Did:**
