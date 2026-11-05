@@ -5,6 +5,7 @@ import { register, getMe } from '../../src/api/auth';
 import { ApiError } from '../../src/lib/apiClient';
 import { useAuth } from '../../src/state/AuthContext';
 import { useAppSettings } from '../../src/state/AppSettingsContext';
+import GoogleSignIn from '../../src/components/GoogleSignInButton';
 
 export default function RegisterScreen() {
   const { t } = useAppSettings();
@@ -130,6 +131,14 @@ export default function RegisterScreen() {
           <Text style={styles.buttonText}>{t('auth', 'register_submit', 'Create account')}</Text>
         )}
       </Pressable>
+
+      <View style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>{t('auth', 'or_divider', 'or')}</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      <GoogleSignIn />
     </View>
   );
 }
@@ -155,4 +164,7 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
+  dividerText: { marginHorizontal: 12, fontSize: 12, color: '#94A3B8', textTransform: 'uppercase' },
 });

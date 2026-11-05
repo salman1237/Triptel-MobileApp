@@ -30,6 +30,18 @@ jest.mock('../../src/api/settings', () => ({
 jest.mock('../../src/api/auth', () => ({
   register: jest.fn(),
   getMe: jest.fn(),
+  googleLogin: jest.fn(),
+}));
+
+jest.mock('@react-native-google-signin/google-signin', () => ({
+  GoogleSignin: { configure: jest.fn(), hasPlayServices: jest.fn(), signIn: jest.fn() },
+  GoogleSigninButton: Object.assign(() => null, {
+    Size: { Icon: 0, Standard: 1, Wide: 2 },
+    Color: { Dark: 'dark', Light: 'light' },
+  }),
+  isErrorWithCode: jest.fn().mockReturnValue(false),
+  isSuccessResponse: jest.fn(),
+  statusCodes: { SIGN_IN_CANCELLED: 'SIGN_IN_CANCELLED' },
 }));
 
 const mockReplace = jest.fn();

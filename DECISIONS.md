@@ -5,6 +5,87 @@ Each entry: what was decided, why, and what would make it worth revisiting.
 
 ---
 
+## 2026-11-05 — FR-306 ShurjoPay hand-off: custom-scheme deep link, backend changed
+
+**Decided** (user's explicit choice, see conversation): option 1 from
+`docs/Architecture.md` → "Payment" - `expo-web-browser`'s
+`openAuthSessionAsync` watches for a redirect to `triptel://payment-callback`.
+This needed the backend change that doc flagged as a prerequisite, made
+directly in `D:\eSim\backend` (a separate repo/codebase) per the user's
+explicit choice to do it there rather than switch to the no-backend-change
+option.
+
+**What changed in the backend** (`D:\eSim\backend`):
+- `app/core/config.py`: new `MOBILE_APP_RETURN_SCHEME` setting, defaults to
+  `"triptel://payment-callback"`.
+- `app/schemas/order.py`: `OrderCreateRequest` gets a new `mobile: bool = False`
+  field. No effect on the WALLET path, which never redirects anywhere.
+- `app/api/v1/payments.py`: `POST /payments/shurjopay/order-initiate` marks
+  the ShurjoPay reference `"ORDERPAY-M-{order.id}"` (vs `"ORDERPAY-{order.id}"`)
+  when `req.mobile` is set - no new DB column or migration, reusing the same
+  prefix-dispatch pattern the code already uses to tell `ORDERPAY-` apart
+  from `TOPUP-`. `GET /payments/shurjopay/callback` and
+  `_complete_gateway_order` detect the `-M-` marker and redirect to the
+  custom scheme instead of `FRONTEND_BASE_URL` - both the success path and
+  every failure path (`_fail` helper now takes a `mobile` flag). `return_url`/
+  `cancel_url` sent to ShurjoPay itself stay pointed at the backend's own
+  `/callback` unchanged, so verification/crediting logic is 100% shared
+  between web and mobile - only the *final* redirect destination differs.
+  Added 4 new backend pytest tests (`tests/test_gateway_checkout.py`) proving
+  the mobile redirect, mobile failure redirect, and that the existing web
+  redirect is unaffected - all deliberately broken and confirmed to fail
+  before being trusted.
+
+**Not yet done (mobile app side):** `POST /payments/shurjopay/order-initiate`
+needs to be called with `mobile: true` from the RN app, and the actual
+`openAuthSessionAsync` screen/flow for FR-306 still needs building in this
+repo (Triptel-MobileApp) - this entry only covers the backend prerequisite.
+
+**One known gap, accepted:** the earliest possible failure point in
+`shurjopay_callback` (ShurjoPay's own verification API call returning
+something unparseable, before `customer_order_id` is even known) still
+defaults to a web-style `/wallet` redirect regardless of which client
+initiated the payment - there's no way to know the origin at that point
+without a DB column, and this is an exceptional failure of ShurjoPay's own
+API, not a normal customer-facing path. Revisit if this turns out to matter
+in practice.
+
+**Follow-on requirement:** Google Sign-In (FR-103) and this both needed
+switching the mobile app from plain Expo Go to an `expo-dev-client` build -
+see the FR-103 entry for that.
+
+## 2026-11-05 — App identity: `co.triptel.app`; switching to expo-dev-client for FR-103
+
+**Decided:** Android `package` and iOS `bundleIdentifier` both set to
+`co.triptel.app` (no prior convention existed anywhere in the repo or
+docs). Also starting the switch from plain Expo Go to an
+`expo-dev-client` build, specifically to support FR-103 (Google
+Sign-In) - the previously-assumed "try the existing web OAuth client ID
+via Expo's auth proxy in plain Expo Go" path turned out to be dead:
+Expo's `auth.expo.io` proxy is deprecated, and current SDK 58 guidance
+for Google Sign-In requires either a direct custom-scheme redirect or
+the native `@react-native-google-signin/google-signin` library - both
+need a dev client, confirmed via Expo's own docs and auth.expo.io's own
+deprecation notice before committing to this path (see chat transcript
+2026-11-05).
+
+**Why `co.triptel.app` specifically:** reverse-domain of `triptel.co`,
+matches `app.json`'s existing `"scheme": "triptel"`. Low-stakes before
+any store submission - can still change before a real App
+Store/Play Store listing exists.
+
+**Follow-on requirement this creates:** Google Sign-In on Android needs
+a *separate* Android-type OAuth client registered in the same Google
+Cloud project as the existing web `GOOGLE_CLIENT_ID`
+(`1095507553767-...`), tied to `co.triptel.app` + the dev build's
+signing certificate SHA-1 fingerprint. That registration step needs
+Google Cloud Console access this session doesn't have - the user needs
+to do it, with the exact package name and SHA-1 this session provides.
+
+**Revisit if:** the app is renamed, or a real published package
+name/bundle ID is assigned later - `co.triptel.app` is a placeholder
+chosen for development, not confirmed as the production identity.
+
 ## 2026-11-05 — Found live on-device: wallet balance showed "NaN" (FR-304/FR-1001 regression)
 
 **Found doing a live device smoke test** (the user asked directly whether a

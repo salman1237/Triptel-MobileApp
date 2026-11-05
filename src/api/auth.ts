@@ -87,6 +87,14 @@ export function register(details: RegisterDetails): Promise<AuthToken> {
   return apiFetch<AuthToken>('/auth/register', { method: 'POST', body: details });
 }
 
+// `credential` is the ID token @react-native-google-signin/google-signin
+// returns from GoogleSignin.signIn() - matches GoogleLoginRequest
+// (app/schemas/auth.py), which also covers sign-up (the backend creates an
+// account on first Google sign-in). See app/api/v1/auth.py's google_login().
+export function googleLogin(credential: string): Promise<AuthToken> {
+  return apiFetch<AuthToken>('/auth/google', { method: 'POST', body: { credential } });
+}
+
 export type StatusMessage = {
   status: string;
   message: string;

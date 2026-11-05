@@ -8,9 +8,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "co.triptel.app"
     },
     "android": {
+      "package": "co.triptel.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -27,7 +29,19 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-sharing",
-      "expo-video"
-    ]
+      "expo-video",
+      "@react-native-google-signin/google-signin"
+    ],
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "cbe8c088-db86-497a-9a2c-c526accfc97c"
+      }
+    },
+    "owner": "salman1237"
   }
 }
