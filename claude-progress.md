@@ -4,6 +4,35 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 6 (cont'd) — 2026-11-05 — FR-902 passing
+
+**Did:**
+- **FR-902 eSIM setup guide → passing** (`f326af5`). `app/guides/esim-setup-guide.tsx` -
+  static content, no API call, ported verbatim from the web's
+  `frontend/src/app/guides/esim-setup-guide/page.tsx`: 6-step iOS and
+  5-step Android install instructions, "install only once" warning,
+  "if it's not connecting" troubleshooting checklist.
+- **Caught a second, differently-shaped vacuous test** while writing the
+  navigation test: pressing two different buttons that both push
+  `/support` (the warning box's Support link and the troubleshooting
+  list's Support link) and asserting `expect(mockPush).toHaveBeenCalledWith('/support')`
+  after each press - but `toHaveBeenCalledWith` checks whether *any* call
+  ever matched, not the most recent one. So when I deliberately broke the
+  second button to push the wrong route, the assertion still passed
+  (satisfied by the *first* button's earlier, correct call). Fixed with
+  `toHaveBeenNthCalledWith(n, ...)` + a final `toHaveBeenCalledTimes(4)`,
+  confirmed it now genuinely fails on the broken button, reverted.
+  `docs/Rules.md` → "Process" already states the general principle
+  ("prove the negative before trusting the positive") broadly enough to
+  cover this - no doc change needed, just a second concrete instance of
+  why that rule exists.
+
+**Next step:** re-assess `feature_list.json` for the next unblocked item -
+FR-402 (My eSIMs) is Maestro-only and needs the QA account's order
+history (unconfirmed); FR-1101 (ticket list) and FR-1201 (legal docs) are
+other static/self-contained candidates worth checking against their real
+backend routes first.
+
 ## Session 6 (cont'd) — 2026-11-05 — FR-901 passing
 
 **Did:**
