@@ -122,3 +122,63 @@ export function createWithdrawal(token: string, params: NewWithdrawal): Promise<
     },
   });
 }
+
+export type WithdrawalStatus = 'PENDING' | 'PAID' | 'REJECTED' | 'CANCELLED';
+
+// Matches withdrawal_svc.serialize() in full (app/api/v1/withdrawals.py) -
+// every field FR-703 (history) needs, beyond the subset WithdrawalRequestResult
+// (FR-702) already covers.
+export type Withdrawal = {
+  id: string;
+  reference_no: string;
+  amount: number;
+  fee_amount: number;
+  net_amount: number;
+  note_category: string | null;
+  note: string | null;
+  account_line: string;
+  status: WithdrawalStatus;
+  payout_currency: string;
+  conversion_rate: number | null;
+  payout_amount: number | null;
+  payment_reference: string | null;
+  has_proof: boolean;
+  rejection_reason: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+};
+
+type RawWithdrawal = Omit<Withdrawal, 'amount' | 'fee_amount' | 'net_amount' | 'conversion_rate' | 'payout_amount'> & {
+  amount: string | number;
+  fee_amount: string | number;
+  net_amount: string | number;
+  conversion_rate: string | number | null;
+  payout_amount: string | number | null;
+};
+
+function toWithdrawal(raw: RawWithdrawal): Withdrawal {
+  return {
+    ...raw,
+    amount: Number(raw.amount),
+    fee_amount: Number(raw.fee_amount),
+    net_amount: Number(raw.net_amount),
+    conversion_rate: raw.conversion_rate === null ? null : Number(raw.conversion_rate),
+    payout_amount: raw.payout_amount === null ? null : Number(raw.payout_amount),
+  };
+}
+
+// FR-703 - withdrawal status history, newest first.
+export async function getMyWithdrawals(token: string): Promise<Withdrawal[]> {
+  const raw = await apiFetch<RawWithdrawal[]>('/withdrawals', { token });
+  return raw.map(toWithdrawal);
+}
+
+// FR-703 - cancel a still-PENDING request; the held amount returns to the
+// wallet server-side (see withdrawal_svc.cancel_withdrawal).
+export async function cancelWithdrawal(token: string, withdrawalId: string): Promise<Withdrawal> {
+  const raw = await apiFetch<RawWithdrawal>(`/withdrawals/${encodeURIComponent(withdrawalId)}/cancel`, {
+    method: 'POST',
+    token,
+  });
+  return toWithdrawal(raw);
+}

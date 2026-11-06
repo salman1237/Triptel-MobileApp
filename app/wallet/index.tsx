@@ -113,6 +113,14 @@ export default function WalletOverviewScreen() {
         >
           <Text style={styles.withdrawLinkText}>{t('wallet', 'withdraw_link', 'Withdraw funds →')}</Text>
         </Pressable>
+        <Pressable
+          onPress={() => router.push('/withdrawals/history')}
+          accessibilityRole="button"
+          accessibilityLabel={t('wallet', 'withdraw_history_link', 'Withdrawal history')}
+          testID="wallet-withdraw-history-link"
+        >
+          <Text style={styles.withdrawLinkText}>{t('wallet', 'withdraw_history_link', 'Withdrawal history →')}</Text>
+        </Pressable>
       </View>
 
       {isLoading ? (
