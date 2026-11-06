@@ -22,13 +22,34 @@ Read this first every session. Newest entry on top.
   currently off, so this confirms the normal path still renders correctly
   with the gate in place - didn't flip the flag on shared staging to force
   the blocking screen; that path is covered by the unit tests.
+- **FR-801 Referral screen → passing** (`6a73869`). New `app/refer/index.tsx` -
+  code/link + share action (React Native's built-in `Share` API, no new
+  dependency), three stat tiles (reward credit, total earned, people
+  joined), per-event reward amounts filtered to enabled-only, and a
+  referred-people list with GRANTED-only earned totals (a reversed reward
+  doesn't count, but is noted) and a Partner badge for a referred
+  MERCHANT. Also shows the passive "You were referred by X" line when a
+  referrer is already on file - the same `/referrals/me` response this
+  screen already has, not a new action. **Explicitly does not include**
+  the "Were you referred by someone?" claim-a-code form - that's FR-802,
+  a separate FR. Ported from the "Refer & earn" sections of the web's
+  `src/app/refer/page.tsx`. Added `src/api/referrals.ts`
+  (`getMyReferrals()`). Linked from the wallet overview's REWARD card via
+  a new "Earn more" action, matching the web's own entry point. 11 tests,
+  proven non-vacuous (confirmed the GRANTED-only earned-total filter is
+  load-bearing). Verified live on-device against the real staging
+  backend: real referral code shown, the real (currently disabled)
+  programme notice rendered correctly, and the new wallet "Earn more"
+  link navigates to this screen correctly.
 - `make check`'s three layers (typecheck, lint, `jest --ci`) all pass
-  clean - 31 suites / 130 tests.
+  clean - 32 suites / 141 tests.
 
-**Next step:** FR-801 (Referral screen) and FR-1102 (New ticket) remain
-good `npm test`-verified, unblocked candidates. FR-305's Maestro
-`launchApp` blocker is still open (see `DECISIONS.md`) and continues to
-gate FR-306/402/602.
+**Next step:** FR-1102 (New ticket) remains a good `npm test`-verified,
+unblocked candidate. FR-802 (Claim a referrer's code) is a natural
+follow-on to FR-801 - the "Were you referred by someone?" form, same
+`/referrals/claim` endpoint FR-801's backend research already covered.
+FR-305's Maestro `launchApp` blocker is still open (see `DECISIONS.md`)
+and continues to gate FR-306/402/602.
 
 ## Session 9 — 2026-11-06 — FR-307/308/309/601/603/701 passing (checkout polish + wallet/withdrawal foundations)
 
