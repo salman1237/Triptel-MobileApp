@@ -59,7 +59,7 @@
 
     { "id": "FR-1201", "title": "Legal documents", "behavior": "User can read Privacy/Terms/Refund/Payment/etc. documents in a tabbed view", "verification": "npm test -- __tests__/legal/documents.test.tsx", "state": "passing", "evidence": "3fbb07d" },
     { "id": "FR-1202", "title": "App settings bootstrap", "behavior": "On launch the app loads public settings, languages, and currency rates before rendering money or translated strings", "verification": "npm test -- __tests__/settings/bootstrap.test.tsx", "state": "passing", "evidence": "8ab2a93" },
-    { "id": "FR-1203", "title": "Maintenance mode", "behavior": "A maintenance-flagged backend shows a blocking screen instead of the app shell", "verification": "npm test -- __tests__/settings/maintenance.test.tsx", "state": "not_started", "evidence": null },
+    { "id": "FR-1203", "title": "Maintenance mode", "behavior": "A maintenance-flagged backend shows a blocking screen instead of the app shell", "verification": "npm test -- __tests__/settings/maintenance.test.tsx", "state": "passing", "evidence": "1789e62" },
 
     { "id": "FR-1301", "title": "Bottom tab bar", "behavior": "Explore/My eSIMs/Wallet/Refer/Profile tabs, no Agent/Partner tabs", "verification": "npm test -- __tests__/navigation/tabs.test.tsx", "state": "not_started", "evidence": null },
     { "id": "FR-1302", "title": "Currency switcher", "behavior": "User can switch display currency and the choice persists via the preferences endpoint", "verification": "npm test -- __tests__/settings/currency-switcher.test.tsx", "state": "not_started", "evidence": null },
