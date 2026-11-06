@@ -33,7 +33,7 @@
 
     { "id": "FR-501", "title": "Public tracking screen", "behavior": "Opening a valid share_token shows the same status view without login; an invalid token shows a clear error with a support link", "verification": "npm test -- __tests__/track/public-tracking.test.tsx", "state": "not_started", "evidence": null },
 
-    { "id": "FR-601", "title": "Wallet overview", "behavior": "User sees DEFAULT/REWARD/COMMISSION balances and the transaction ledger", "verification": "npm test -- __tests__/wallet/overview.test.tsx", "state": "not_started", "evidence": null },
+    { "id": "FR-601", "title": "Wallet overview", "behavior": "User sees DEFAULT/REWARD/COMMISSION balances and the transaction ledger", "verification": "npm test -- __tests__/wallet/overview.test.tsx", "state": "passing", "evidence": "50fa51a" },
     { "id": "FR-602", "title": "Top-up via gateway", "behavior": "User can top up via ShurjoPay with a preset or custom amount honoring configured limits", "verification": "maestro test flows/wallet-topup-gateway.yaml", "state": "not_started", "evidence": null },
     { "id": "FR-603", "title": "Manual deposit", "behavior": "User can submit a manual deposit (bank/bKash/Nagad/Rocket/QR) with a transaction ID for admin approval", "verification": "npm test -- __tests__/wallet/manual-deposit.test.tsx", "state": "not_started", "evidence": null },
     { "id": "FR-604", "title": "Top-up result banners", "behavior": "Returning from the gateway shows a clear success/failed/cancelled banner", "verification": "npm test -- __tests__/wallet/topup-banners.test.tsx", "state": "not_started", "evidence": null },
