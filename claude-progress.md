@@ -4,7 +4,7 @@ Read this first every session. Newest entry on top.
 
 ---
 
-## Session 9 — 2026-11-06 — FR-307/308/309 passing (checkout success/preparing/failure)
+## Session 9 — 2026-11-06 — FR-307/308/309/601/603/701 passing (checkout polish + wallet/withdrawal foundations)
 
 **Did:**
 - **FR-307 Purchase success → passing** (`920630f`). `CheckoutFlowModal.tsx`'s
@@ -48,25 +48,51 @@ Read this first every session. Newest entry on top.
   separate, later FRs. 4 tests, proven non-vacuous. Verified live
   on-device: real balances and real transaction history (the session's
   three eSIM purchases plus one deposit) all rendered correctly.
+- **FR-603 Manual deposit → passing** (`0818058`). New
+  `app/wallet/manual-deposit.tsx` - submit a bank/mobile-wallet/QR manual
+  deposit with a transaction ID for admin approval, linked from the wallet
+  overview screen. Added `getPublicSettings()` (`src/api/settings.ts`) and
+  `submitManualDeposit()` (`src/api/wallets.ts`) - the latter is one of the
+  few endpoints that takes the amount in the customer's own currency
+  directly (the backend converts at approval time), unlike every other
+  EUR-at-the-boundary amount in this app. Skipped FR-602 (gateway top-up) -
+  Maestro-blocked, same as FR-305/306/402. 5 tests, proven non-vacuous.
+  Verified live on-device against the real staging backend: real
+  configured bKash account shown, real submission created a real PENDING
+  deposit request.
+- **FR-701 Payout accounts → passing** (`c34ef2c`). New
+  `app/withdrawals/accounts.tsx` - add/remove/set-default up to 5 payout
+  accounts (bank or mobile wallet), linked from the wallet overview screen.
+  Added `src/api/withdrawals.ts`. Deliberately scoped to accounts only -
+  the withdrawal request form and history (FR-702/703, same web page) are
+  separate, later FRs. 8 tests, proven non-vacuous. Verified live
+  on-device: empty state, then added a real bKash account and saw it
+  listed with the Default badge.
+- Skipped **FR-604** (top-up result banners) this session - its entire
+  premise is "returning from the gateway," which only makes sense once
+  FR-602 exists; building the banner UI first would be guessing at a
+  contract that isn't defined yet.
 - `make check`'s three layers (typecheck, lint, `jest --ci`) all pass
-  clean as of this session's end - 25 suites / 96 tests.
+  clean as of this session's end - 27 suites / 109 tests.
 
 **FR-305's Maestro blocker is still open** (see `DECISIONS.md` -
 `launchApp` hangs for any app, on either available device - root-caused
 to Maestro's own driver, not this project's code). Not revisited this
-session; FR-307/308/309/601 were chosen specifically because their
-verification is `npm test`, not Maestro.
+session; every FR picked up this session was chosen specifically because
+its verification is `npm test`, not Maestro.
 
 **Next step:** FR-306's actual mobile-side `openAuthSessionAsync` checkout
 screen is still unbuilt (only its backend prerequisite shipped, see
-Session 7). FR-402 (My eSIMs list) is a natural next candidate but its
-verification is Maestro-based - blocked on the same launchApp issue until
-that's resolved. FR-1301 (Bottom tab bar) is `npm test`-verified and
+Session 7). FR-402 (My eSIMs list) and FR-602 (gateway top-up) are natural
+next candidates content-wise but both Maestro-blocked until the launchApp
+issue is resolved. FR-1301 (Bottom tab bar) is `npm test`-verified and
 unblocked, but `app/(tabs)/_layout.tsx`'s own comment says each tab is
-added only once its FR is built - Wallet now exists (this session), My
-eSIMs/Refer don't yet, so FR-1301 is still premature. FR-602/603/604
-(wallet top-up) build directly on this session's FR-601 work and are
-`npm test`-verified - good next candidates.
+added only once its FR is built - Wallet now exists, My eSIMs/Refer don't
+yet, so FR-1301 is still premature. FR-702 (Withdrawal request) is
+`npm test`-verified and builds directly on this session's FR-701 work -
+good next candidate, though its own behavior text mentions being "blocked
+behind KYC" (FR-1002, not built) - check how much of that gating needs to
+actually exist vs. can be stubbed before starting.
 
 ## Session 8 — 2026-11-05 — FR-305 implemented, manually verified live, blocked on Maestro/Vivo for the formal flip
 
