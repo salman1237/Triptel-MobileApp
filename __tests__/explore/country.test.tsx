@@ -32,6 +32,7 @@ jest.mock('../../src/api/catalog', () => ({
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ slug: 'japan' }),
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
 }));
 
 const mockedGetDestination = getDestination as jest.Mock;

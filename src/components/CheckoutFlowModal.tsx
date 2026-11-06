@@ -8,16 +8,33 @@ import { esimInstallLinks } from '../lib/esimInstall';
 
 // The working/preparing/success/error stages of the wallet-checkout state
 // machine (FR-305) - see docs/Architecture.md -> "The checkout state
-// machine". The richer "setting up" copy (FR-308) and the refund-status
-// wording (FR-309) are later FRs that build on the still-minimal preparing/
-// error stages. The one rule already in force here, straight from a real
-// web-app incident (docs/Architecture.md -> "Lessons from the web app"):
-// a PROCESSING/still-polling order is never shown as a failure.
+// machine". The one rule already in force throughout, straight from a real
+// web-app incident (docs/Architecture.md -> "Lessons from the web app"): a
+// PROCESSING/still-polling order is never shown as a failure - the error
+// stage is reached only for an explicit FAILED order status, or a checkout
+// call that never created an order at all.
+//
+// FR-309 - `refundStatus` distinguishes the two cases a caller can actually
+// be certain about from the one it can't:
+//   'refunded'    - order.status === 'FAILED': the backend's fulfil_order
+//                   always refunds a failed order (see orders.py), so this
+//                   is a known fact, not a guess.
+//   'not_charged' - the checkout call itself was rejected with a
+//                   structured API error (e.g. insufficient balance) -
+//                   these are pre-commit validation failures; nothing was
+//                   ever debited.
+//   'unknown'     - anything else (a network error, an unexpected
+//                   response shape) - genuinely ambiguous, since the order
+//                   may or may not have been created server-side before
+//                   the response was lost. Stays honestly uncertain rather
+//                   than claiming either way.
+export type RefundStatus = 'refunded' | 'not_charged' | 'unknown';
+
 export type CheckoutFlowStage =
   | { stage: 'working' }
   | { stage: 'preparing' }
   | { stage: 'success'; order: Order }
-  | { stage: 'error'; message: string };
+  | { stage: 'error'; message: string; refundStatus: RefundStatus };
 
 export type CheckoutFlowModalProps = {
   flow: CheckoutFlowStage | null;
@@ -151,6 +168,18 @@ export default function CheckoutFlowModal({ flow, onClose, onRetry }: CheckoutFl
               <Text style={styles.title}>{t('checkout', 'error_title', "Purchase didn't go through")}</Text>
               <Text style={styles.body} testID="checkout-error-message">
                 {flow.message}
+              </Text>
+              <Text style={styles.body} testID={`checkout-error-refund-status-${flow.refundStatus}`}>
+                {flow.refundStatus === 'refunded' &&
+                  t('checkout', 'refund_status_refunded', 'The full amount has been refunded to your wallet.')}
+                {flow.refundStatus === 'not_charged' &&
+                  t('checkout', 'refund_status_not_charged', 'Your wallet was not charged.')}
+                {flow.refundStatus === 'unknown' &&
+                  t(
+                    'checkout',
+                    'refund_status_unknown',
+                    "If your wallet was charged, it will be refunded automatically. Check your wallet balance if you're unsure."
+                  )}
               </Text>
               <View style={styles.row}>
                 <Pressable

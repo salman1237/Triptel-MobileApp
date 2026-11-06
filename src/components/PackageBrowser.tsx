@@ -263,23 +263,34 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
       if (order.status === 'COMPLETED') {
         setFlow({ stage: 'success', order });
       } else {
+        // waitForOrder only ever resolves with COMPLETED or FAILED (it
+        // polls until one of those, or throws on timeout - handled above)
+        // - so this is always an explicit FAILED status, never a guess.
+        // fulfil_order always refunds a failed order (see orders.py).
         setFlow({
           stage: 'error',
           message: t(
             'checkout',
             'wallet_checkout_provisioning_failed',
-            "We couldn't set up this eSIM with the network. The full amount has been refunded to your wallet."
+            "We couldn't set up this eSIM with the network."
           ),
+          refundStatus: 'refunded',
         });
       }
     } catch (err) {
-      setFlow({
-        stage: 'error',
-        message:
-          err instanceof ApiError && typeof err.detail === 'string'
-            ? err.detail
-            : t('checkout', 'wallet_checkout_network_error', 'Purchase failed. If your wallet was charged, it has been refunded.'),
-      });
+      if (err instanceof ApiError && typeof err.detail === 'string') {
+        // A structured 400 (e.g. insufficient balance) is a pre-commit
+        // validation failure - the order, and any debit, never happened.
+        setFlow({ stage: 'error', message: err.detail, refundStatus: 'not_charged' });
+      } else {
+        // Network error / unexpected response shape - genuinely unknown
+        // whether the backend committed before the response was lost.
+        setFlow({
+          stage: 'error',
+          message: t('checkout', 'wallet_checkout_network_error', "Couldn't complete the purchase. Please try again."),
+          refundStatus: 'unknown',
+        });
+      }
     }
   }
 
