@@ -1,8 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getLanguages, getRates, getTranslations } from '../api/settings';
-import type { CurrencyRate, LanguageMeta, TranslationNamespaces } from '../api/settings';
+import { getLanguages, getPublicSettings, getRates, getTranslations } from '../api/settings';
+import type { CurrencyRate, LanguageMeta, PublicSettings, TranslationNamespaces } from '../api/settings';
 
 // A UI preference, not a credential - AsyncStorage, not SecureStore.
 // See docs/Architecture.md -> "Secure storage".
@@ -49,6 +50,7 @@ type AppSettingsContextValue = {
   convert: (amountEur: number) => number;
   convertTo: (amountEur: number, targetCurrency: string) => number;
   formatPrice: (amountEur: number) => string;
+  publicSettings: PublicSettings | null;
 };
 
 const AppSettingsContext = createContext<AppSettingsContextValue | undefined>(undefined);
@@ -59,6 +61,19 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const [translations, setTranslations] = useState<TranslationNamespaces>({});
   const [currency, setCurrencyState] = useState(DEFAULT_CURRENCY);
   const [rates, setRates] = useState<Record<string, number>>({ EUR: 1 });
+  const [publicSettings, setPublicSettings] = useState<PublicSettings | null>(null);
+
+  // FR-1202 - the app shell (money, translated strings) must not render
+  // until these have at least been attempted once, so a customer never
+  // sees a flash of raw translation keys or the wrong currency symbol
+  // before the real settings arrive. Each flag flips on success *or*
+  // failure (via .catch below) - a single slow/failed endpoint must not
+  // block the app forever, only until it has actually responded.
+  const [languagesLoaded, setLanguagesLoaded] = useState(false);
+  const [translationsLoaded, setTranslationsLoaded] = useState(false);
+  const [ratesLoaded, setRatesLoaded] = useState(false);
+  const [publicSettingsLoaded, setPublicSettingsLoaded] = useState(false);
+  const isReady = languagesLoaded && translationsLoaded && ratesLoaded && publicSettingsLoaded;
 
   useEffect(() => {
     let cancelled = false;
@@ -86,7 +101,10 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       .then((data) => {
         if (!cancelled) setLanguages(data);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLanguagesLoaded(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -98,7 +116,10 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       .then((data) => {
         if (!cancelled) setTranslations(data.namespaces || {});
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setTranslationsLoaded(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -116,7 +137,25 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
         }
         setRates(map);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setRatesLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPublicSettings()
+      .then((data) => {
+        if (!cancelled) setPublicSettings(data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setPublicSettingsLoaded(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -157,9 +196,31 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const isRTL = activeLanguage ? activeLanguage.is_rtl : false;
 
   const value = useMemo<AppSettingsContextValue>(
-    () => ({ lang, setLang, languages, isRTL, t, currency, setCurrency, convert, convertTo, formatPrice }),
-    [lang, setLang, languages, isRTL, t, currency, setCurrency, convert, convertTo, formatPrice]
+    () => ({
+      lang,
+      setLang,
+      languages,
+      isRTL,
+      t,
+      currency,
+      setCurrency,
+      convert,
+      convertTo,
+      formatPrice,
+      publicSettings,
+    }),
+    [lang, setLang, languages, isRTL, t, currency, setCurrency, convert, convertTo, formatPrice, publicSettings]
   );
+
+  // FR-1202 - don't render money or translated strings until the bootstrap
+  // fetches have all settled at least once.
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }} testID="app-settings-bootstrap-loading">
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return <AppSettingsContext.Provider value={value}>{children}</AppSettingsContext.Provider>;
 }

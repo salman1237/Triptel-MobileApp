@@ -31,6 +31,7 @@ jest.mock('../../src/api/settings', () => ({
   getLanguages: jest.fn().mockResolvedValue([]),
   getTranslations: jest.fn().mockResolvedValue({ language_code: 'en', namespaces: {} }),
   getRates: jest.fn().mockResolvedValue([]),
+  getPublicSettings: jest.fn().mockResolvedValue({ bangla_qr_image: null, payment_methods: [] }),
 }));
 
 jest.mock('../../src/api/auth', () => ({
