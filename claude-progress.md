@@ -38,21 +38,35 @@ Read this first every session. Newest entry on top.
   module once `CheckoutFlowModal` started calling `useRouter()`
   unconditionally. Fixed by adding `useRouter` to that mock. Full suite
   (24 suites / 92 tests) confirmed green afterward.
+- **FR-601 Wallet overview → passing** (`50fa51a`). New `app/wallet/index.tsx`:
+  the three wallet-type balance cards (DEFAULT/REWARD/COMMISSION, each with
+  its own title/note ported from the web's `WALLET_COPY`) and the
+  transaction ledger (newest first, signed amounts, running balance-after).
+  Added `getMyLedger()` to `src/api/wallets.ts` (same Decimal-string-to-
+  number conversion as `getMyWallets`). Deliberately scoped to balances +
+  ledger only - top-up (FR-602/603/604) and withdrawals (FR-701/702) are
+  separate, later FRs. 4 tests, proven non-vacuous. Verified live
+  on-device: real balances and real transaction history (the session's
+  three eSIM purchases plus one deposit) all rendered correctly.
 - `make check`'s three layers (typecheck, lint, `jest --ci`) all pass
-  clean as of this session's end.
+  clean as of this session's end - 25 suites / 96 tests.
 
 **FR-305's Maestro blocker is still open** (see `DECISIONS.md` -
 `launchApp` hangs for any app, on either available device - root-caused
 to Maestro's own driver, not this project's code). Not revisited this
-session; FR-307/308/309 were chosen specifically because their
+session; FR-307/308/309/601 were chosen specifically because their
 verification is `npm test`, not Maestro.
 
 **Next step:** FR-306's actual mobile-side `openAuthSessionAsync` checkout
 screen is still unbuilt (only its backend prerequisite shipped, see
 Session 7). FR-402 (My eSIMs list) is a natural next candidate but its
 verification is Maestro-based - blocked on the same launchApp issue until
-that's resolved. Good non-Maestro candidates to continue with: FR-601
-(Wallet overview), FR-1301 (Bottom tab bar) - both `npm test`-verified.
+that's resolved. FR-1301 (Bottom tab bar) is `npm test`-verified and
+unblocked, but `app/(tabs)/_layout.tsx`'s own comment says each tab is
+added only once its FR is built - Wallet now exists (this session), My
+eSIMs/Refer don't yet, so FR-1301 is still premature. FR-602/603/604
+(wallet top-up) build directly on this session's FR-601 work and are
+`npm test`-verified - good next candidates.
 
 ## Session 8 — 2026-11-05 — FR-305 implemented, manually verified live, blocked on Maestro/Vivo for the formal flip
 
