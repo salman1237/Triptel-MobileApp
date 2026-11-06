@@ -96,15 +96,24 @@ export default function WalletOverviewScreen() {
         </Pressable>
       </View>
 
-      <Pressable
-        onPress={() => router.push('/withdrawals/accounts')}
-        accessibilityRole="button"
-        accessibilityLabel={t('wallet', 'payout_accounts_link', 'Payout accounts')}
-        style={styles.withdrawLink}
-        testID="wallet-payout-accounts-link"
-      >
-        <Text style={styles.withdrawLinkText}>{t('wallet', 'payout_accounts_link', 'Payout accounts →')}</Text>
-      </Pressable>
+      <View style={styles.withdrawLinksRow}>
+        <Pressable
+          onPress={() => router.push('/withdrawals/accounts')}
+          accessibilityRole="button"
+          accessibilityLabel={t('wallet', 'payout_accounts_link', 'Payout accounts')}
+          testID="wallet-payout-accounts-link"
+        >
+          <Text style={styles.withdrawLinkText}>{t('wallet', 'payout_accounts_link', 'Payout accounts →')}</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => router.push('/withdrawals/request')}
+          accessibilityRole="button"
+          accessibilityLabel={t('wallet', 'withdraw_link', 'Withdraw funds')}
+          testID="wallet-withdraw-link"
+        >
+          <Text style={styles.withdrawLinkText}>{t('wallet', 'withdraw_link', 'Withdraw funds →')}</Text>
+        </Pressable>
+      </View>
 
       {isLoading ? (
         <ActivityIndicator testID="wallet-overview-loading" />
@@ -150,7 +159,7 @@ const styles = StyleSheet.create({
     borderColor: '#D0D5DD',
   },
   depositButtonText: { fontSize: 12, fontWeight: '700', color: '#1D4ED8' },
-  withdrawLink: { marginBottom: 20 },
+  withdrawLinksRow: { flexDirection: 'row', gap: 16, marginBottom: 20 },
   withdrawLinkText: { fontSize: 12, fontWeight: '700', color: '#1D4ED8' },
   cardsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
   card: {

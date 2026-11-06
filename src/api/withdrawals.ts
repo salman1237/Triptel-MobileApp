@@ -50,3 +50,75 @@ export function deletePayoutAccount(token: string, accountId: string): Promise<{
     token,
   });
 }
+
+// Matches the dict GET /withdrawals/config returns (app/api/v1/withdrawals.py).
+// Amounts come back as decimal strings - converted to numbers here, once,
+// same as every other Decimal-as-JSON-string field in this app.
+export type WithdrawalConfig = {
+  min_amount: number;
+  max_amount: number;
+  fee_type: 'flat' | 'percent';
+  fee_value: number;
+  payout_currency: string;
+  processing_time: string;
+  is_enabled: boolean;
+  base_currency: string;
+  note_categories: string[];
+  balance: number;
+  can_withdraw: boolean;
+  blockers: string[];
+  kyc_verified: boolean;
+  kyc_status: string | null;
+  account_count: number;
+};
+
+type RawWithdrawalConfig = Omit<WithdrawalConfig, 'min_amount' | 'max_amount' | 'fee_value' | 'balance'> & {
+  min_amount: string | number;
+  max_amount: string | number;
+  fee_value: string | number;
+  balance: string | number;
+};
+
+// FR-702 - eligibility + live limits, fetched before the form is even
+// shown, so the screen can explain itself rather than fail on submit.
+export async function getWithdrawalConfig(token: string): Promise<WithdrawalConfig> {
+  const raw = await apiFetch<RawWithdrawalConfig>('/withdrawals/config', { token });
+  return {
+    ...raw,
+    min_amount: Number(raw.min_amount),
+    max_amount: Number(raw.max_amount),
+    fee_value: Number(raw.fee_value),
+    balance: Number(raw.balance),
+  };
+}
+
+export type NewWithdrawal = {
+  amount: number;
+  bankAccountId: string;
+  noteCategory?: string;
+  note?: string;
+};
+
+// Matches withdrawal_svc.serialize() - only the fields FR-702 itself needs
+// to confirm a submission; FR-703 (withdrawal history) types the rest.
+export type WithdrawalRequestResult = {
+  id: string;
+  reference_no: string;
+  amount: string;
+  fee_amount: string;
+  net_amount: string;
+  status: 'PENDING' | 'PAID' | 'REJECTED' | 'CANCELLED';
+};
+
+export function createWithdrawal(token: string, params: NewWithdrawal): Promise<WithdrawalRequestResult> {
+  return apiFetch<WithdrawalRequestResult>('/withdrawals', {
+    method: 'POST',
+    token,
+    body: {
+      amount: params.amount,
+      bank_account_id: params.bankAccountId,
+      note_category: params.noteCategory,
+      note: params.note,
+    },
+  });
+}
