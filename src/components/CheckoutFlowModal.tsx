@@ -59,15 +59,26 @@ export default function CheckoutFlowModal({ flow, onClose, onRetry }: CheckoutFl
                   "Your eSIM is being issued by the network. This usually takes a minute or two - it will appear in My eSIMs. Please don't buy again, you have already paid for this one."
                 )}
               </Text>
-              <Pressable
-                onPress={onClose}
-                accessibilityRole="button"
-                accessibilityLabel={t('checkout', 'close', 'Close')}
-                style={styles.primaryButton}
-                testID="checkout-preparing-close"
-              >
-                <Text style={styles.primaryButtonText}>{t('checkout', 'close', 'Close')}</Text>
-              </Pressable>
+              <View style={styles.row}>
+                <Pressable
+                  onPress={onClose}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('checkout', 'close', 'Close')}
+                  style={styles.secondaryButton}
+                  testID="checkout-preparing-close"
+                >
+                  <Text style={styles.secondaryButtonText}>{t('checkout', 'close', 'Close')}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleViewMyEsims}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('checkout', 'view_my_esims_short', 'View My eSIMs')}
+                  style={styles.primaryButton}
+                  testID="checkout-preparing-view-my-esims"
+                >
+                  <Text style={styles.primaryButtonText}>{t('checkout', 'view_my_esims_short', 'View My eSIMs')}</Text>
+                </Pressable>
+              </View>
             </View>
           )}
 
