@@ -1,6 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { getMyWallets, getMyLedger } from '../../src/api/wallets';
 import type { Wallet, LedgerEntry } from '../../src/api/wallets';
 import { formatDate } from '../../src/lib/datetime';
@@ -22,6 +23,7 @@ const WALLET_COPY: Record<Wallet['wallet_type'], { title: string; note: string }
 export default function WalletOverviewScreen() {
   const { t, formatPrice } = useAppSettings();
   const { token } = useAuth();
+  const router = useRouter();
 
   const walletsQuery = useQuery({
     queryKey: ['wallets', 'my-wallets'],
@@ -81,7 +83,18 @@ export default function WalletOverviewScreen() {
 
   return (
     <View style={styles.container} testID="wallet-overview-screen">
-      <Text style={styles.title}>{t('wallet', 'overview_title', 'Wallet')}</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>{t('wallet', 'overview_title', 'Wallet')}</Text>
+        <Pressable
+          onPress={() => router.push('/wallet/manual-deposit')}
+          accessibilityRole="button"
+          accessibilityLabel={t('wallet', 'manual_deposit_link', 'Manual deposit')}
+          style={styles.depositButton}
+          testID="wallet-manual-deposit-link"
+        >
+          <Text style={styles.depositButtonText}>{t('wallet', 'manual_deposit_link', 'Manual deposit')}</Text>
+        </Pressable>
+      </View>
 
       {isLoading ? (
         <ActivityIndicator testID="wallet-overview-loading" />
@@ -116,7 +129,17 @@ export default function WalletOverviewScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 16, paddingTop: 24 },
-  title: { fontSize: 22, fontWeight: '800', color: '#0F172A', marginBottom: 16 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  title: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
+  depositButton: {
+    minHeight: 36,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D0D5DD',
+  },
+  depositButtonText: { fontSize: 12, fontWeight: '700', color: '#1D4ED8' },
   cardsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
   card: {
     flexGrow: 1,

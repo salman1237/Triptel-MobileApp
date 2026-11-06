@@ -48,3 +48,28 @@ export type LegalDocument = {
 export function getLegalDocument(slug: string): Promise<LegalDocument> {
   return apiFetch<LegalDocument>(`/settings/legal/${encodeURIComponent(slug)}`);
 }
+
+// Matches PaymentMethodConfig (app/schemas/settings.py) - one manual-deposit
+// account (bank/mobile wallet/QR) an admin has configured and activated.
+export type PaymentMethod = {
+  id: string | null;
+  name: string;
+  kind: 'mobile' | 'bank' | 'qr';
+  account_name: string | null;
+  account_number: string | null;
+  branch: string | null;
+  instructions: string | null;
+  is_active: boolean;
+};
+
+// Only the fields FR-603 (manual deposit) needs from PublicSettingsResponse -
+// add more as later FRs need them, not speculatively.
+export type PublicSettings = {
+  bangla_qr_image: string | null;
+  payment_methods: PaymentMethod[];
+};
+
+// Public.
+export function getPublicSettings(): Promise<PublicSettings> {
+  return apiFetch<PublicSettings>('/settings/public');
+}

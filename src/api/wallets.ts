@@ -50,3 +50,41 @@ export async function getMyLedger(token: string): Promise<LedgerEntry[]> {
     balance_after: Number(e.balance_after),
   }));
 }
+
+export type ManualDepositStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+// Matches ManualDepositResponse (app/schemas/wallet.py).
+export type ManualDeposit = {
+  id: string;
+  amount: number;
+  currency: string;
+  bank_name: string;
+  transaction_id: string;
+  status: ManualDepositStatus;
+  created_at: string;
+};
+
+type RawManualDeposit = Omit<ManualDeposit, 'amount'> & { amount: string | number };
+
+// Authenticated. FR-603 - submits an admin-pending manual deposit. Unlike
+// every EUR-at-the-boundary amount elsewhere, this endpoint takes the
+// amount in whatever currency the customer actually deposited (they sent
+// real money in BDT/etc. to a real bank/mobile account) - the backend
+// converts it at approval time, not here. See docs/Rules.md -> "Payment &
+// checkout" and app/api/v1/wallets.py's submit_manual_deposit().
+export async function submitManualDeposit(
+  token: string,
+  params: { amount: number; currency: string; bankName: string; transactionId: string }
+): Promise<ManualDeposit> {
+  const raw = await apiFetch<RawManualDeposit>('/wallets/manual-deposit', {
+    method: 'POST',
+    token,
+    body: {
+      amount: params.amount,
+      currency: params.currency,
+      bank_name: params.bankName,
+      transaction_id: params.transactionId,
+    },
+  });
+  return { ...raw, amount: Number(raw.amount) };
+}
