@@ -97,8 +97,24 @@ Read this first every session. Newest entry on top.
   backend (this account has no withdrawal history yet). This completes the
   withdrawals feature set reachable without Maestro or a KYC-verified test
   account (FR-701/702/703 all passing).
+- **FR-1202 App settings bootstrap → passing** (`8ab2a93`).
+  `AppSettingsProvider` now gates rendering - public settings, languages,
+  translations, and currency rates must all settle at least once (success
+  or failure - a single slow/failed endpoint doesn't block forever) before
+  children render. Previously it rendered immediately with defaults and
+  updated reactively, so every cold start briefly flashed raw translation
+  keys and the wrong currency symbol before the real data arrived. Added
+  the `GET /settings/public` fetch to the bootstrap itself (not previously
+  loaded at this level) and exposed it as `publicSettings` on the context
+  for FR-1203 (maintenance mode) to read later. **Load-bearing change**:
+  25 existing test files mock `'../../src/api/settings'` without
+  `getPublicSettings`, which now throws if called unmocked - all 25
+  updated with the same one-line mock addition. 3 new tests, proven
+  non-vacuous. Verified live on-device: a real cold start (force-stop,
+  relaunch, fresh Metro connect) renders the full destinations screen
+  correctly afterward.
 - `make check`'s three layers (typecheck, lint, `jest --ci`) all pass
-  clean as of this session's end - 29 suites / 122 tests.
+  clean as of this session's end - 30 suites / 125 tests.
 
 **FR-305's Maestro blocker is still open** (see `DECISIONS.md` -
 `launchApp` hangs for any app, on either available device - root-caused
@@ -113,9 +129,12 @@ candidates content-wise but both Maestro-blocked until the launchApp issue
 is resolved. FR-1301 (Bottom tab bar) is `npm test`-verified and
 unblocked, but `app/(tabs)/_layout.tsx`'s own comment says each tab is
 added only once its FR is built - Wallet exists, My eSIMs/Refer don't yet,
-so still premature. FR-801 (Referral screen), FR-1102 (New ticket),
-FR-1202 (App settings bootstrap), and FR-1203 (Maintenance mode) are all
-`npm test`-verified and unblocked - good next candidates.
+so still premature. FR-801 (Referral screen), FR-1102 (New ticket), and
+FR-1203 (Maintenance mode - can now read the already-fetched
+`publicSettings` from FR-1202's context, though `PublicSettings`'s type in
+`src/api/settings.ts` only has `bangla_qr_image`/`payment_methods` so far
+and will need a `maintenance_mode` field added) are all `npm test`-verified
+and unblocked - good next candidates.
 
 ## Session 8 — 2026-11-05 — FR-305 implemented, manually verified live, blocked on Maestro/Vivo for the formal flip
 
