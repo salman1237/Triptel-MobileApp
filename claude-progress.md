@@ -4,6 +4,56 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 9 — 2026-11-06 — FR-307/308/309 passing (checkout success/preparing/failure)
+
+**Did:**
+- **FR-307 Purchase success → passing** (`920630f`). `CheckoutFlowModal.tsx`'s
+  success stage now shows the branded QR (`EsimQr`, reused from FR-401),
+  one-tap install-on-iPhone/Android links (`src/lib/esimInstall.ts`, ported
+  verbatim from the web), and a "View & Print" path to a new minimal
+  `app/my-esims/` placeholder (FR-402 builds the real list later). 5 tests,
+  proven non-vacuous. Verified live on-device: real QR, both install
+  buttons, and navigation all confirmed working.
+- **FR-308 Purchase still-processing state → passing** (`574b36f`). Added a
+  "View My eSIMs" action to the preparing stage (matching the web) and a
+  dedicated test suite proving the core invariant: a still-provisioning
+  order never shows an error. 4 tests, proven non-vacuous. The preparing
+  state itself can't be forced live deterministically (staging's supplier
+  resolves within the short poll window every time) - covered by unit
+  tests instead; live-verified the success path still works with the
+  modal's extra button in place.
+- **FR-309 Purchase failure → passing** (`969e0d6`). Replaced the old
+  single hedged error message with a three-way `RefundStatus`
+  ('refunded' | 'not_charged' | 'unknown') the UI states definitively
+  where it actually can - 'refunded' only for an explicit FAILED order
+  (fulfil_order always refunds those server-side), 'not_charged' for a
+  pre-commit checkout rejection (e.g. insufficient balance), and an
+  honestly-uncertain 'unknown' for network-level failures where the
+  client genuinely can't know if the backend committed. 5 tests, proven
+  non-vacuous.
+- **Found and fixed a real regression along the way**: FR-307's
+  `useRouter()` call in `CheckoutFlowModal` broke
+  `__tests__/explore/country.test.tsx`, which had a *partial*
+  `expo-router` mock (only `useLocalSearchParams`) that clobbered the real
+  module once `CheckoutFlowModal` started calling `useRouter()`
+  unconditionally. Fixed by adding `useRouter` to that mock. Full suite
+  (24 suites / 92 tests) confirmed green afterward.
+- `make check`'s three layers (typecheck, lint, `jest --ci`) all pass
+  clean as of this session's end.
+
+**FR-305's Maestro blocker is still open** (see `DECISIONS.md` -
+`launchApp` hangs for any app, on either available device - root-caused
+to Maestro's own driver, not this project's code). Not revisited this
+session; FR-307/308/309 were chosen specifically because their
+verification is `npm test`, not Maestro.
+
+**Next step:** FR-306's actual mobile-side `openAuthSessionAsync` checkout
+screen is still unbuilt (only its backend prerequisite shipped, see
+Session 7). FR-402 (My eSIMs list) is a natural next candidate but its
+verification is Maestro-based - blocked on the same launchApp issue until
+that's resolved. Good non-Maestro candidates to continue with: FR-601
+(Wallet overview), FR-1301 (Bottom tab bar) - both `npm test`-verified.
+
 ## Session 8 — 2026-11-05 — FR-305 implemented, manually verified live, blocked on Maestro/Vivo for the formal flip
 
 **Did:**
