@@ -85,8 +85,20 @@ Read this first every session. Newest entry on top.
   verification first." blocker rendered correctly and disabled the form -
   this account isn't KYC-verified, so the successful-submission path
   itself is covered only by the unit tests, not a live run.
+- **FR-703 Withdrawal history → passing** (`53d9622`). New
+  `app/withdrawals/history.tsx` - status history, newest first, with
+  status-specific detail (PAID shows payout amount/currency/conversion
+  rate, REJECTED shows the rejection reason), and a Cancel action on
+  still-PENDING requests only (the held amount returns to the wallet
+  server-side on cancel). Added `getMyWithdrawals()`/`cancelWithdrawal()`
+  to `src/api/withdrawals.ts`. The receipt link for PAID rows is FR-704
+  (separate FR), omitted. 7 tests, proven non-vacuous. Verified live
+  on-device: the empty state renders correctly against the real staging
+  backend (this account has no withdrawal history yet). This completes the
+  withdrawals feature set reachable without Maestro or a KYC-verified test
+  account (FR-701/702/703 all passing).
 - `make check`'s three layers (typecheck, lint, `jest --ci`) all pass
-  clean as of this session's end - 28 suites / 115 tests.
+  clean as of this session's end - 29 suites / 122 tests.
 
 **FR-305's Maestro blocker is still open** (see `DECISIONS.md` -
 `launchApp` hangs for any app, on either available device - root-caused
@@ -94,16 +106,16 @@ to Maestro's own driver, not this project's code). Not revisited this
 session; every FR picked up this session was chosen specifically because
 its verification is `npm test`, not Maestro.
 
-**Next step:** FR-703 (Withdrawal history) builds directly on FR-701/702
-and is `npm test`-verified - natural next pick, in progress. FR-306's
-actual mobile-side `openAuthSessionAsync` checkout screen is still unbuilt
-(only its backend prerequisite shipped, see Session 7). FR-402 (My eSIMs
-list) and FR-602 (gateway top-up) are natural candidates content-wise but
-both Maestro-blocked until the launchApp issue is resolved. FR-1301
-(Bottom tab bar) is `npm test`-verified and unblocked, but
-`app/(tabs)/_layout.tsx`'s own comment says each tab is added only once
-its FR is built - Wallet exists, My eSIMs/Refer don't yet, so still
-premature.
+**Next step:** FR-306's actual mobile-side `openAuthSessionAsync` checkout
+screen is still unbuilt (only its backend prerequisite shipped, see
+Session 7). FR-402 (My eSIMs list) and FR-602 (gateway top-up) are natural
+candidates content-wise but both Maestro-blocked until the launchApp issue
+is resolved. FR-1301 (Bottom tab bar) is `npm test`-verified and
+unblocked, but `app/(tabs)/_layout.tsx`'s own comment says each tab is
+added only once its FR is built - Wallet exists, My eSIMs/Refer don't yet,
+so still premature. FR-801 (Referral screen), FR-1102 (New ticket),
+FR-1202 (App settings bootstrap), and FR-1203 (Maintenance mode) are all
+`npm test`-verified and unblocked - good next candidates.
 
 ## Session 8 — 2026-11-05 — FR-305 implemented, manually verified live, blocked on Maestro/Vivo for the formal flip
 
