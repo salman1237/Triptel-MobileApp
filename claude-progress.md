@@ -4,6 +4,32 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 10 — 2026-11-07 — FR-1203 passing (maintenance mode)
+
+**Did:**
+- **FR-1203 Maintenance mode → passing** (`1789e62`). New
+  `src/components/MaintenanceGate.tsx` - a maintenance-flagged backend
+  shows a blocking screen instead of the app shell, except for admins
+  (SUPER_ADMIN/ADMIN) and the public tracking path (`/track/...` - a
+  customer with nothing but a delivery-email link still needs their QR
+  code; FR-501, that screen itself, isn't built yet, but the exemption is
+  kept now rather than guessed in later). Ported from the web's
+  `src/components/MaintenanceGate.tsx`. Reads the `publicSettings`
+  FR-1202's bootstrap gate already fetches - no separate request. Wired
+  into `app/_layout.tsx` wrapping the root `Slot`. Extended
+  `PublicSettings` with `platform_name`/`maintenance_mode`. 5 tests, proven
+  non-vacuous. Verified live on-device: staging's `maintenance_mode` is
+  currently off, so this confirms the normal path still renders correctly
+  with the gate in place - didn't flip the flag on shared staging to force
+  the blocking screen; that path is covered by the unit tests.
+- `make check`'s three layers (typecheck, lint, `jest --ci`) all pass
+  clean - 31 suites / 130 tests.
+
+**Next step:** FR-801 (Referral screen) and FR-1102 (New ticket) remain
+good `npm test`-verified, unblocked candidates. FR-305's Maestro
+`launchApp` blocker is still open (see `DECISIONS.md`) and continues to
+gate FR-306/402/602.
+
 ## Session 9 — 2026-11-06 — FR-307/308/309/601/603/701 passing (checkout polish + wallet/withdrawal foundations)
 
 **Did:**
