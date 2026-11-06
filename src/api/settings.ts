@@ -62,11 +62,14 @@ export type PaymentMethod = {
   is_active: boolean;
 };
 
-// Only the fields FR-603 (manual deposit) needs from PublicSettingsResponse -
-// add more as later FRs need them, not speculatively.
+// Only the fields FR-603 (manual deposit) and FR-1203 (maintenance mode)
+// need from PublicSettingsResponse - add more as later FRs need them, not
+// speculatively.
 export type PublicSettings = {
   bangla_qr_image: string | null;
   payment_methods: PaymentMethod[];
+  platform_name: string;
+  maintenance_mode: boolean;
 };
 
 // Public.
