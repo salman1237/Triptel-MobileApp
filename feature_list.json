@@ -35,7 +35,7 @@
 
     { "id": "FR-601", "title": "Wallet overview", "behavior": "User sees DEFAULT/REWARD/COMMISSION balances and the transaction ledger", "verification": "npm test -- __tests__/wallet/overview.test.tsx", "state": "passing", "evidence": "50fa51a" },
     { "id": "FR-602", "title": "Top-up via gateway", "behavior": "User can top up via ShurjoPay with a preset or custom amount honoring configured limits", "verification": "maestro test flows/wallet-topup-gateway.yaml", "state": "not_started", "evidence": null },
-    { "id": "FR-603", "title": "Manual deposit", "behavior": "User can submit a manual deposit (bank/bKash/Nagad/Rocket/QR) with a transaction ID for admin approval", "verification": "npm test -- __tests__/wallet/manual-deposit.test.tsx", "state": "not_started", "evidence": null },
+    { "id": "FR-603", "title": "Manual deposit", "behavior": "User can submit a manual deposit (bank/bKash/Nagad/Rocket/QR) with a transaction ID for admin approval", "verification": "npm test -- __tests__/wallet/manual-deposit.test.tsx", "state": "passing", "evidence": "0818058" },
     { "id": "FR-604", "title": "Top-up result banners", "behavior": "Returning from the gateway shows a clear success/failed/cancelled banner", "verification": "npm test -- __tests__/wallet/topup-banners.test.tsx", "state": "not_started", "evidence": null },
 
     { "id": "FR-701", "title": "Payout accounts", "behavior": "User can add/remove/set-default up to 5 bank or mobile-wallet payout accounts", "verification": "npm test -- __tests__/withdrawals/accounts.test.tsx", "state": "not_started", "evidence": null },
