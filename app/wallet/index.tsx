@@ -53,6 +53,15 @@ export default function WalletOverviewScreen() {
           {formatPrice(wallet.balance)}
         </Text>
         <Text style={styles.cardNote}>{t('wallet', `type_${wallet.wallet_type.toLowerCase()}_note`, copy.note)}</Text>
+        {wallet.wallet_type === 'REWARD' && (
+          <Pressable
+            onPress={() => router.push('/refer')}
+            accessibilityRole="button"
+            testID="wallet-earn-more-link"
+          >
+            <Text style={styles.earnMoreLink}>{t('wallet', 'earn_more_link', 'Earn more →')}</Text>
+          </Pressable>
+        )}
       </View>
     );
   }
@@ -181,6 +190,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' },
   cardBalance: { fontSize: 22, fontWeight: '800', color: '#0F172A', marginTop: 6 },
   cardNote: { fontSize: 11, color: '#64748B', marginTop: 6 },
+  earnMoreLink: { fontSize: 11, fontWeight: '700', color: '#1D4ED8', marginTop: 6 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A', marginBottom: 8 },
   empty: { fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 24 },
   error: { fontSize: 13, color: '#B42318', textAlign: 'center', marginTop: 40 },
