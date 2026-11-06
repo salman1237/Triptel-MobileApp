@@ -96,6 +96,16 @@ export default function WalletOverviewScreen() {
         </Pressable>
       </View>
 
+      <Pressable
+        onPress={() => router.push('/withdrawals/accounts')}
+        accessibilityRole="button"
+        accessibilityLabel={t('wallet', 'payout_accounts_link', 'Payout accounts')}
+        style={styles.withdrawLink}
+        testID="wallet-payout-accounts-link"
+      >
+        <Text style={styles.withdrawLinkText}>{t('wallet', 'payout_accounts_link', 'Payout accounts →')}</Text>
+      </Pressable>
+
       {isLoading ? (
         <ActivityIndicator testID="wallet-overview-loading" />
       ) : isError ? (
@@ -140,6 +150,8 @@ const styles = StyleSheet.create({
     borderColor: '#D0D5DD',
   },
   depositButtonText: { fontSize: 12, fontWeight: '700', color: '#1D4ED8' },
+  withdrawLink: { marginBottom: 20 },
+  withdrawLinkText: { fontSize: 12, fontWeight: '700', color: '#1D4ED8' },
   cardsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
   card: {
     flexGrow: 1,
