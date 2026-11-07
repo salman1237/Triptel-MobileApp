@@ -4,9 +4,28 @@ Read this first every session. Newest entry on top.
 
 ---
 
-## Session 10 — 2026-11-07 — FR-1203 passing (maintenance mode)
+## Session 10 — 2026-11-07 — FR-1203/801/802 passing (maintenance mode + referrals)
 
 **Did:**
+- **FR-802 Claim a referrer's code post-signup → passing** (`c29d297`,
+  flip `2c3d61e`). Added the "Were you referred by someone?" claim form
+  to `app/refer/index.tsx` - visible only while `/referrals/me` reports
+  `can_claim`, replaced by FR-801's existing passive "You were referred
+  by X" line once a referrer is on file. New `claimReferralCode()` in
+  `src/api/referrals.ts` (`POST /referrals/claim`); on success the form
+  clears and the `['referrals', 'me']` query is invalidated so the
+  screen re-renders from the server's fresh state instead of guessing
+  the result client-side. Also factored the Decimal-to-number
+  conversion `getMyReferrals()` used into a shared `toReferralSummary()`
+  helper, since both endpoints return the same shape. Ported from the
+  web's `src/app/refer/page.tsx` claim form/handler. 5 tests, proven
+  non-vacuous (forced the `can_claim` branch to always render the form,
+  confirmed the two referred_by-dependent tests failed, restored it).
+  Verified live on-device against the real staging backend: deep-linked
+  to `/refer` on the connected Vivo device, entered a bogus code
+  ("BADCODE1"), submitted, and the server's real rejection ("That
+  referral code isn't valid.") rendered in the form - the claim path
+  round-trips through the real API end to end.
 - **FR-1203 Maintenance mode → passing** (`1789e62`). New
   `src/components/MaintenanceGate.tsx` - a maintenance-flagged backend
   shows a blocking screen instead of the app shell, except for admins
@@ -45,9 +64,9 @@ Read this first every session. Newest entry on top.
   clean - 32 suites / 141 tests.
 
 **Next step:** FR-1102 (New ticket) remains a good `npm test`-verified,
-unblocked candidate. FR-802 (Claim a referrer's code) is a natural
-follow-on to FR-801 - the "Were you referred by someone?" form, same
-`/referrals/claim` endpoint FR-801's backend research already covered.
+unblocked candidate. FR-803 (Referral-link pre-fill) is a natural
+follow-on to FR-801/802 - pre-filling and live-validating the code on
+the register screen when the app is opened via a referral link.
 FR-305's Maestro `launchApp` blocker is still open (see `DECISIONS.md`)
 and continues to gate FR-306/402/602.
 
