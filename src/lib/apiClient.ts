@@ -46,3 +46,29 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
 
   return data as T;
 }
+
+// Multipart requests (file uploads) can't go through apiFetch - fetch sets
+// its own Content-Type (with the multipart boundary) when given a FormData
+// body, and setting one manually breaks the boundary. Same response
+// parsing/error handling as apiFetch otherwise, so callers get one
+// ApiError shape regardless of which this went through.
+export async function apiFetchForm<T>(
+  path: string,
+  options: { method?: 'POST' | 'PUT'; token?: string; form: FormData }
+): Promise<T> {
+  const { method = 'POST', token, form } = options;
+
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetch(`${API_BASE}${path}`, { method, headers, body: form });
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+
+  if (!response.ok) {
+    throw new ApiError(response.status, data && typeof data === 'object' && 'detail' in data ? data.detail : data);
+  }
+
+  return data as T;
+}
