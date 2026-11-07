@@ -4,9 +4,37 @@ Read this first every session. Newest entry on top.
 
 ---
 
-## Session 10 — 2026-11-07 — FR-1203/801/802/803 passing (maintenance mode + referrals)
+## Session 10 — 2026-11-07 — FR-1203/801/802/803/1301 passing (maintenance mode + referrals + tab bar)
 
 **Did:**
+- **FR-1301 Bottom tab bar → passing** (`7144f0a`, flip `c25c58f`).
+  Moved `app/my-esims`, `app/wallet`, `app/refer` into `app/(tabs)/` and
+  registered them in `app/(tabs)/_layout.tsx`, so the five User App tabs
+  (`docs/Architecture.md`'s intended layout) now actually render as a
+  tab bar - Explore / My eSIMs / Wallet / Refer / Profile, no
+  Agent/Partner tab (this app has neither role - CLAUDE.md -> "Hard
+  Constraints"). Route groups don't change the URL, so every existing
+  path and deep link (`/wallet`, `/refer`, `triptel://refer`,
+  `triptel://auth/register?ref=X`) kept working untouched - only each
+  moved file's relative import depth needed a `../` added. 3 tests,
+  proven non-vacuous (swapped the tab order and confirmed the order
+  test failed; removed `manual-deposit`'s `href: null` and confirmed
+  that test failed; restored both, confirmed all pass). **Caught a real
+  bug during live verification that the jest run alone missed**:
+  registering `wallet/manual-deposit` as a second, hidden sibling
+  `Tabs.Screen` next to `wallet/index` looked correct on paper, but
+  tapping "Manual deposit" from the Wallet tab silently bounced back to
+  Explore instead of opening the form - Expo Router's `Tabs` has no host
+  to render a hidden sibling screen into. Fixed with the standard
+  pattern: `app/(tabs)/wallet/_layout.tsx` is now its own `Stack`
+  (`index` + `manual-deposit`), and the tab bar registers a single
+  `wallet` entry pointing at that stack. Live-verified on the connected
+  Vivo device end to end: tab bar shows all five tabs in order; tapped
+  through My eSIMs, Wallet, Refer, and Profile, each rendering real data
+  from the staging backend; specifically re-confirmed the manual-deposit
+  fix - "Manual deposit" now opens the real form (payment method,
+  account details, amount/TxID fields) with the Wallet tab staying
+  highlighted, instead of bouncing to Explore.
 - **FR-803 Referral-link pre-fill → passing** (`f1ff116`, flip `2f56226`).
   A shared referral link arrives as `.../auth/register?ref=CODE` -
   `expo-router`'s `useLocalSearchParams` surfaces it as a local search
@@ -84,7 +112,7 @@ Read this first every session. Newest entry on top.
   programme notice rendered correctly, and the new wallet "Earn more"
   link navigates to this screen correctly.
 - `make check`'s three layers (typecheck, lint, `jest --ci`) all pass
-  clean - 34 suites / 152 tests.
+  clean - 35 suites / 155 tests.
 - Also this session: re-investigated the Maestro `launchApp` hang
   blocking FR-106/305/306/402/602 (see `DECISIONS.md`) - tested the
   one principled next step (downgrading to CLI 2.9.0, pre-dating a
@@ -92,12 +120,12 @@ Read this first every session. Newest entry on top.
   hang reproduces identically on both versions, so it's genuinely
   device/environment-specific, not a CLI regression. Still blocked.
 
-**Next step:** FR-1102 (New ticket), FR-1103 (Ticket thread), FR-1301
-(Bottom tab bar), FR-1302/1303 (currency/language switchers), and the
-eSIM-detail/receipt/tracking group (FR-403/404/405/501) are all good
-`npm test`-verified, unblocked candidates. FR-305's Maestro `launchApp`
-blocker is still open (see `DECISIONS.md`, now including the ruled-out
-version-downgrade experiment) and continues to gate FR-106/306/402/602.
+**Next step:** FR-1102 (New ticket), FR-1103 (Ticket thread), FR-1302/1303
+(currency/language switchers), and the eSIM-detail/receipt/tracking group
+(FR-403/404/405/501) are all good `npm test`-verified, unblocked
+candidates. FR-305's Maestro `launchApp` blocker is still open (see
+`DECISIONS.md`, now including the ruled-out version-downgrade experiment)
+and continues to gate FR-106/306/402/602.
 
 ## Session 9 — 2026-11-06 — FR-307/308/309/601/603/701 passing (checkout polish + wallet/withdrawal foundations)
 
