@@ -4,9 +4,42 @@ Read this first every session. Newest entry on top.
 
 ---
 
-## Session 10 — 2026-11-07 — FR-1203/801/802/803/1301 passing (maintenance mode + referrals + tab bar)
+## Session 10 — 2026-11-07 — FR-1203/801/802/803/1301/1302 passing (maintenance mode + referrals + tab bar + currency switcher)
 
 **Did:**
+- **FR-1302 Currency switcher → passing** (`5197dc0`, flip `b95f25b`).
+  Added a currency chip row to the Profile screen - EUR/USD/BDT/GBP/AED/
+  SAR, matching the web's hardcoded `CURRENCIES` list exactly
+  (`docs/Rules.md`'s "Money" parity requirement). Tapping a chip applies
+  it immediately via the existing `setCurrency()` (already persists to
+  `AsyncStorage`) and, for a signed-in account, best-effort saves it
+  server-side through the existing `updatePreferences({ preferred_currency })`
+  - same endpoint FR-1001's phone edit already uses, same silent-catch-
+  on-failure pattern the web's `AppSettingsContext.setCurrency` uses, so
+  a failed save never undoes the switch. 4 tests, proven non-vacuous
+  (removed the `updatePreferences` call, confirmed the persistence test
+  failed while the others stayed green, restored it). Live-verified on
+  the connected Vivo device against the real staging backend: switched
+  from BDT to USD, the selected chip updated instantly and the wallet
+  balance converted correctly (৳69061.80 -> $562.59).
+- **Tab bar icon fix** (`8f87c44`, same session as FR-1301, not its own
+  FR). The user reported every tab showing a generic fallback icon after
+  FR-1301 shipped - root cause was no `tabBarIcon` ever configured.
+  Installed `@expo/vector-icons` + its required peer deps (`expo-font`,
+  `expo-asset`, both registered in `app.json`'s `plugins`) and wired a
+  distinct Ionicons icon per tab via a shared `tabIcon()` helper.
+  **Caught a second, more serious bug during live verification**: the
+  package's barrel export (`import { Ionicons } from '@expo/vector-icons'`)
+  crashed the app to a blank white screen on launch - its `IconsLazy.js`
+  eagerly bundles every icon set's font file, and Metro failed to
+  resolve one of them (`Fontisto.ttf`) as an asset, failing the whole
+  bundle. Fixed by importing `Ionicons` from its own subpath
+  (`@expo/vector-icons/Ionicons`) instead. Verification also uncovered
+  two unrelated dev-environment issues, both fixed: the Metro dev server
+  had stopped responding to reload requests (restarted it) and `adb`'s
+  reverse port forward to Metro had silently dropped after an earlier
+  USB disconnect this session (re-established, and now something to
+  check first whenever device verification seems stuck on a stale bundle).
 - **FR-1301 Bottom tab bar → passing** (`7144f0a`, flip `c25c58f`).
   Moved `app/my-esims`, `app/wallet`, `app/refer` into `app/(tabs)/` and
   registered them in `app/(tabs)/_layout.tsx`, so the five User App tabs
@@ -112,7 +145,7 @@ Read this first every session. Newest entry on top.
   programme notice rendered correctly, and the new wallet "Earn more"
   link navigates to this screen correctly.
 - `make check`'s three layers (typecheck, lint, `jest --ci`) all pass
-  clean - 35 suites / 155 tests.
+  clean - 36 suites / 159 tests.
 - Also this session: re-investigated the Maestro `launchApp` hang
   blocking FR-106/305/306/402/602 (see `DECISIONS.md`) - tested the
   one principled next step (downgrading to CLI 2.9.0, pre-dating a
@@ -120,9 +153,9 @@ Read this first every session. Newest entry on top.
   hang reproduces identically on both versions, so it's genuinely
   device/environment-specific, not a CLI regression. Still blocked.
 
-**Next step:** FR-1102 (New ticket), FR-1103 (Ticket thread), FR-1302/1303
-(currency/language switchers), and the eSIM-detail/receipt/tracking group
-(FR-403/404/405/501) are all good `npm test`-verified, unblocked
+**Next step:** FR-1102 (New ticket), FR-1103 (Ticket thread), FR-1303
+(language switcher, incl. RTL), and the eSIM-detail/receipt/tracking
+group (FR-403/404/405/501) are all good `npm test`-verified, unblocked
 candidates. FR-305's Maestro `launchApp` blocker is still open (see
 `DECISIONS.md`, now including the ruled-out version-downgrade experiment)
 and continues to gate FR-106/306/402/602.
