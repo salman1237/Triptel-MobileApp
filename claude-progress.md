@@ -4,9 +4,30 @@ Read this first every session. Newest entry on top.
 
 ---
 
-## Session 10 — 2026-11-07 — FR-1203/801/802/803/1301/1302 passing (maintenance mode + referrals + tab bar + currency switcher)
+## Session 10 — 2026-11-07 — FR-1203/801/802/803/1301/1302/1102 passing (maintenance mode + referrals + tab bar + currency switcher + support)
 
 **Did:**
+- **FR-1102 New ticket → passing** (`f51cfff`, flip `5fe35d2`). New
+  `app/support/new.tsx` - subject/category/body form plus up to 5 image
+  attachments, reached from the ticket list's existing "New ticket" link
+  (`app/support/index.tsx` already pointed at `/support/new`, unbuilt
+  until now). Category chips come from the public
+  `GET /support/categories` so the options can't drift from the
+  backend's enum. Attachments use `expo-image-picker` (already pinned
+  in `Technical_Requirements.md` for exactly this), capped at 5
+  client-side. `POST /support/tickets` is multipart (FastAPI
+  Form + File fields), which `apiFetch` can't send - added
+  `apiFetchForm()` to `src/lib/apiClient.ts`, the multipart counterpart
+  with the same `ApiError`/response-parsing behavior. After a
+  successful create, routes back to the ticket list (invalidating its
+  query) rather than to `/support/{id}` - FR-1103 (the ticket thread
+  screen) doesn't exist yet, so that route would 404 today, same as
+  every existing ticket row in the list already linking there. 6 tests,
+  proven non-vacuous (raised the attachment cap from 5 to 50, confirmed
+  the cap test failed, restored it). Live-verified on the connected
+  Vivo device against the real staging backend: created a real ticket
+  (reference `TKT-261107-61033`), which appeared in the list
+  immediately after navigating back.
 - **FR-1302 Currency switcher → passing** (`5197dc0`, flip `b95f25b`).
   Added a currency chip row to the Profile screen - EUR/USD/BDT/GBP/AED/
   SAR, matching the web's hardcoded `CURRENCIES` list exactly
@@ -145,7 +166,7 @@ Read this first every session. Newest entry on top.
   programme notice rendered correctly, and the new wallet "Earn more"
   link navigates to this screen correctly.
 - `make check`'s three layers (typecheck, lint, `jest --ci`) all pass
-  clean - 36 suites / 159 tests.
+  clean - 37 suites / 165 tests.
 - Also this session: re-investigated the Maestro `launchApp` hang
   blocking FR-106/305/306/402/602 (see `DECISIONS.md`) - tested the
   one principled next step (downgrading to CLI 2.9.0, pre-dating a
@@ -153,12 +174,13 @@ Read this first every session. Newest entry on top.
   hang reproduces identically on both versions, so it's genuinely
   device/environment-specific, not a CLI regression. Still blocked.
 
-**Next step:** FR-1102 (New ticket), FR-1103 (Ticket thread), FR-1303
-(language switcher, incl. RTL), and the eSIM-detail/receipt/tracking
-group (FR-403/404/405/501) are all good `npm test`-verified, unblocked
-candidates. FR-305's Maestro `launchApp` blocker is still open (see
-`DECISIONS.md`, now including the ruled-out version-downgrade experiment)
-and continues to gate FR-106/306/402/602.
+**Next step:** FR-1103 (Ticket thread - FR-1102 currently routes back to
+the list instead of into a thread view, since that screen doesn't exist
+yet), FR-1303 (language switcher, incl. RTL), and the eSIM-detail/receipt/
+tracking group (FR-403/404/405/501) are all good `npm test`-verified,
+unblocked candidates. FR-305's Maestro `launchApp` blocker is still open
+(see `DECISIONS.md`, now including the ruled-out version-downgrade
+experiment) and continues to gate FR-106/306/402/602.
 
 ## Session 9 — 2026-11-06 — FR-307/308/309/601/603/701 passing (checkout polish + wallet/withdrawal foundations)
 
