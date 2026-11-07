@@ -4,9 +4,32 @@ Read this first every session. Newest entry on top.
 
 ---
 
-## Session 10 — 2026-11-07 — FR-1203/801/802 passing (maintenance mode + referrals)
+## Session 10 — 2026-11-07 — FR-1203/801/802/803 passing (maintenance mode + referrals)
 
 **Did:**
+- **FR-803 Referral-link pre-fill → passing** (`f1ff116`, flip `2f56226`).
+  A shared referral link arrives as `.../auth/register?ref=CODE` -
+  `expo-router`'s `useLocalSearchParams` surfaces it as a local search
+  param regardless of entry method. `app/auth/register.tsx` now reads
+  that param as the referral field's initial value (uppercased), and
+  live-validates whatever code is in the field - pre-filled or typed -
+  against the new public `validateReferralCode()`
+  (`GET /referrals/validate`), debounced 350ms, same pattern as the
+  web's `src/app/auth/register/page.tsx`. Shows "Invited by X [+
+  reward]" or a soft unrecognised-code note, never blocking submission.
+  6 tests, proven non-vacuous (forced the field to always start empty,
+  confirmed the 3 pre-fill-dependent tests failed, restored it). Also
+  updated the existing FR-101 register tests' `expo-router` mock to add
+  `useLocalSearchParams`. Hit one real lint catch along the way -
+  `react-hooks/set-state-in-effect` flagged a synchronous `setReferral`
+  call at the top of the debounce effect; moved the short-code clear
+  branch inside the `setTimeout` alongside the validation call to fix
+  it properly rather than suppressing the rule. Verified live on-device:
+  deep-linked to `triptel://auth/register?ref=5JRRHJH8` on the connected
+  Vivo device, the field pre-filled with that code and the live
+  validation call hit the real backend - correctly showed the
+  unrecognised-code note, since the referral programme is currently
+  disabled on staging (same as `/refer` already shows).
 - **FR-802 Claim a referrer's code post-signup → passing** (`c29d297`,
   flip `2c3d61e`). Added the "Were you referred by someone?" claim form
   to `app/refer/index.tsx` - visible only while `/referrals/me` reports
@@ -61,14 +84,20 @@ Read this first every session. Newest entry on top.
   programme notice rendered correctly, and the new wallet "Earn more"
   link navigates to this screen correctly.
 - `make check`'s three layers (typecheck, lint, `jest --ci`) all pass
-  clean - 32 suites / 141 tests.
+  clean - 34 suites / 152 tests.
+- Also this session: re-investigated the Maestro `launchApp` hang
+  blocking FR-106/305/306/402/602 (see `DECISIONS.md`) - tested the
+  one principled next step (downgrading to CLI 2.9.0, pre-dating a
+  suspected upstream dadb-timeout regression) and ruled it out; the
+  hang reproduces identically on both versions, so it's genuinely
+  device/environment-specific, not a CLI regression. Still blocked.
 
-**Next step:** FR-1102 (New ticket) remains a good `npm test`-verified,
-unblocked candidate. FR-803 (Referral-link pre-fill) is a natural
-follow-on to FR-801/802 - pre-filling and live-validating the code on
-the register screen when the app is opened via a referral link.
-FR-305's Maestro `launchApp` blocker is still open (see `DECISIONS.md`)
-and continues to gate FR-306/402/602.
+**Next step:** FR-1102 (New ticket), FR-1103 (Ticket thread), FR-1301
+(Bottom tab bar), FR-1302/1303 (currency/language switchers), and the
+eSIM-detail/receipt/tracking group (FR-403/404/405/501) are all good
+`npm test`-verified, unblocked candidates. FR-305's Maestro `launchApp`
+blocker is still open (see `DECISIONS.md`, now including the ruled-out
+version-downgrade experiment) and continues to gate FR-106/306/402/602.
 
 ## Session 9 — 2026-11-06 — FR-307/308/309/601/603/701 passing (checkout polish + wallet/withdrawal foundations)
 
