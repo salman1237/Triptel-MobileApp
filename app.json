@@ -30,6 +30,8 @@
       "expo-web-browser",
       "expo-sharing",
       "expo-video",
+      "expo-font",
+      "expo-asset",
       "@react-native-google-signin/google-signin"
     ],
     "extra": {

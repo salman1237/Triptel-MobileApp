@@ -24,6 +24,7 @@
 | `expo-print` | Render a receipt/eSIM sheet to PDF (RN equivalent of the web's print-only pages) |
 | `date-fns` (or equivalent already used on the web, check `frontend/package.json`) | Date formatting consistent with the web app |
 | `expo-video` | Embedded *#06#/EID check-video on the compatible-phones guide (FR-901) |
+| `@expo/vector-icons` | Bottom tab bar icons (FR-1301) - ships bundled with the Expo SDK, pinned explicitly here since it's imported directly |
 | `jsqr`, `@types/qrcode` (devDependencies, test-only) | Decodes a synthesized damaged/noised QR bitmap in `EsimQr.test.tsx` (FR-401) to prove error-correction H actually survives a logo overlay - the test counterpart to the backend's `test_qr_branding.py` |
 
 Do not add a dependency outside this list without updating this doc — that's the
