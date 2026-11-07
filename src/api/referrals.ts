@@ -67,6 +67,18 @@ function toReferralSummary(raw: RawReferralSummary): ReferralSummary {
   };
 }
 
+export type ReferralValidation =
+  | { valid: true; referrer_username: string; joining_reward: string; currency: string }
+  | { valid: false };
+
+// Public, no auth - used by the register screen (FR-803). Deliberately thin
+// (see app/api/v1/referrals.py's validate_referral_code()): confirms only
+// that a code belongs to someone and shows that person's username, so a
+// stranger's code can't be used to enumerate accounts.
+export async function validateReferralCode(code: string): Promise<ReferralValidation> {
+  return apiFetch<ReferralValidation>(`/referrals/validate?code=${encodeURIComponent(code)}`);
+}
+
 // Authenticated. FR-801 - everything the "Refer & earn" screen shows.
 export async function getMyReferrals(token: string): Promise<ReferralSummary> {
   const raw = await apiFetch<RawReferralSummary>('/referrals/me', { token });

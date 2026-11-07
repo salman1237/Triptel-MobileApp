@@ -1,24 +1,47 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { register, getMe } from '../../src/api/auth';
+import { validateReferralCode } from '../../src/api/referrals';
+import type { ReferralValidation } from '../../src/api/referrals';
 import { ApiError } from '../../src/lib/apiClient';
 import { useAuth } from '../../src/state/AuthContext';
 import { useAppSettings } from '../../src/state/AppSettingsContext';
 import GoogleSignIn from '../../src/components/GoogleSignInButton';
 
+// FR-803 - a shared referral link arrives as .../auth/register?ref=CODE
+// (expo-router surfaces it as a local search param regardless of whether
+// it came in via the app's own triptel:// scheme or a universal link),
+// so the field fills itself and the invite is confirmed by name before
+// anyone types anything. Ported from the web's src/app/auth/register/page.tsx.
 export default function RegisterScreen() {
   const { t } = useAppSettings();
   const { signIn } = useAuth();
   const router = useRouter();
+  const params = useLocalSearchParams<{ ref?: string }>();
 
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
-  const [referralCode, setReferralCode] = useState('');
+  const [referralCode, setReferralCode] = useState(() => (params.ref ? params.ref.toUpperCase() : ''));
+  const [referral, setReferral] = useState<ReferralValidation | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const code = referralCode.trim();
+    const handle = setTimeout(() => {
+      if (code.length < 3) {
+        setReferral(null);
+        return;
+      }
+      validateReferralCode(code)
+        .then(setReferral)
+        .catch(() => setReferral(null));
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [referralCode]);
 
   async function handleSubmit() {
     if (!email.trim() || !username.trim() || !password) {
@@ -102,14 +125,32 @@ export default function RegisterScreen() {
 
       <TextInput
         value={referralCode}
-        onChangeText={setReferralCode}
+        onChangeText={(v) => setReferralCode(v.toUpperCase())}
         placeholder={t('auth', 'register_referral_placeholder', 'Referral code (optional)')}
         accessibilityLabel={t('auth', 'register_referral_placeholder', 'Referral code (optional)')}
-        autoCapitalize="none"
+        autoCapitalize="characters"
         autoCorrect={false}
+        maxLength={16}
         style={styles.input}
         testID="register-referral-input"
       />
+
+      {referral?.valid ? (
+        <Text style={styles.referralValid} testID="register-referral-valid">
+          {t('auth', 'register_referral_invited_by', 'Invited by')} {referral.referrer_username}
+          {Number(referral.joining_reward) > 0
+            ? ` — €${Number(referral.joining_reward).toFixed(2)} ${t('auth', 'register_referral_reward_suffix', 'reward credit on sign-up')}`
+            : ''}
+        </Text>
+      ) : referralCode.trim().length >= 3 && referral && !referral.valid ? (
+        <Text style={styles.referralUnknown} testID="register-referral-unknown">
+          {t(
+            'auth',
+            'register_referral_unknown',
+            "We don't recognise that code — you can still sign up without it."
+          )}
+        </Text>
+      ) : null}
 
       {error && (
         <Text style={styles.error} testID="register-error">
@@ -155,6 +196,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   error: { color: '#B42318', marginBottom: 16 },
+  referralValid: { color: '#059669', fontSize: 11, fontWeight: '700', marginTop: -10, marginBottom: 16 },
+  referralUnknown: { color: '#64748B', fontSize: 11, marginTop: -10, marginBottom: 16 },
   button: {
     minHeight: 44,
     backgroundColor: '#1D4ED8',

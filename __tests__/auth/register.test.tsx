@@ -48,6 +48,11 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace, push: jest.fn() }),
+  useLocalSearchParams: () => ({}),
+}));
+
+jest.mock('../../src/api/referrals', () => ({
+  validateReferralCode: jest.fn().mockResolvedValue({ valid: false }),
 }));
 
 const mockedSecureStore = SecureStore as jest.Mocked<typeof SecureStore>;
