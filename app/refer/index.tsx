@@ -1,7 +1,16 @@
-import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import { getMyReferrals } from '../../src/api/referrals';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { claimReferralCode, getMyReferrals } from '../../src/api/referrals';
 import type { ReferredPerson } from '../../src/api/referrals';
 import { formatDate } from '../../src/lib/datetime';
 import { useAppSettings } from '../../src/state/AppSettingsContext';
@@ -21,16 +30,14 @@ function eur(value: number): string {
   return `€${value.toFixed(2)}`;
 }
 
-// FR-801 - code/link, stat tiles, per-event reward amounts, and a list of
-// referred people with what each earned. Ported from the "Refer & earn"
-// sections of the web's src/app/refer/page.tsx, minus the "Were you
-// referred by someone?" claim form (FR-802, separate FR) - this screen
-// only shows the passive "you were referred by X" line when a referrer is
-// already on file, since that's just rendering data this same endpoint
-// already returns, not the claim action itself.
+// FR-801/802 - code/link, stat tiles, per-event reward amounts, a list of
+// referred people with what each earned, and (FR-802) the claim form that
+// lets a user who hasn't bought yet credit whoever referred them. Ported
+// from the "Refer & earn" sections of the web's src/app/refer/page.tsx.
 export default function ReferralScreen() {
   const { t } = useAppSettings();
   const { token } = useAuth();
+  const queryClient = useQueryClient();
 
   const summaryQuery = useQuery({
     queryKey: ['referrals', 'me'],
@@ -38,6 +45,25 @@ export default function ReferralScreen() {
     enabled: Boolean(token),
   });
   const summary = summaryQuery.data;
+
+  const [claimCode, setClaimCode] = useState('');
+  const [claiming, setClaiming] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+
+  async function handleClaim() {
+    if (!token || claimCode.trim().length < 3) return;
+    setClaiming(true);
+    setClaimError(null);
+    try {
+      await claimReferralCode(token, claimCode.trim());
+      setClaimCode('');
+      await queryClient.invalidateQueries({ queryKey: ['referrals', 'me'] });
+    } catch (err: any) {
+      setClaimError(err?.message || t('referrals', 'claim_error', "Couldn't apply that code"));
+    } finally {
+      setClaiming(false);
+    }
+  }
 
   async function handleShare() {
     if (!summary?.share_url) return;
@@ -180,10 +206,58 @@ export default function ReferralScreen() {
             </View>
           )}
 
-          {!summary.can_claim && summary.referred_by && (
-            <Text style={styles.referredByNote} testID="referral-referred-by">
-              {t('referrals', 'referred_by_prefix', 'You were referred by')} {summary.referred_by}.
-            </Text>
+          {summary.can_claim ? (
+            <View style={styles.claimCard} testID="referral-claim-form">
+              <Text style={styles.claimTitle}>
+                {t('referrals', 'claim_title', 'Were you referred by someone?')}
+              </Text>
+              <Text style={styles.claimSubtitle}>
+                {t(
+                  'referrals',
+                  'claim_subtitle',
+                  'Enter their code to credit you both. This can only be added before your first eSIM purchase.'
+                )}
+              </Text>
+              <View style={styles.claimRow}>
+                <TextInput
+                  value={claimCode}
+                  onChangeText={(v) => setClaimCode(v.toUpperCase())}
+                  placeholder={t('referrals', 'claim_placeholder', "Their code")}
+                  maxLength={16}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  style={styles.claimInput}
+                  testID="referral-claim-input"
+                />
+                <Pressable
+                  onPress={handleClaim}
+                  disabled={claiming || claimCode.trim().length < 3}
+                  accessibilityRole="button"
+                  style={[
+                    styles.claimButton,
+                    (claiming || claimCode.trim().length < 3) && styles.claimButtonDisabled,
+                  ]}
+                  testID="referral-claim-submit"
+                >
+                  <Text style={styles.claimButtonText}>
+                    {claiming
+                      ? t('referrals', 'claim_applying', 'Applying…')
+                      : t('referrals', 'claim_apply', 'Apply code')}
+                  </Text>
+                </Pressable>
+              </View>
+              {claimError && (
+                <Text style={styles.claimErrorText} testID="referral-claim-error">
+                  {claimError}
+                </Text>
+              )}
+            </View>
+          ) : (
+            summary.referred_by && (
+              <Text style={styles.referredByNote} testID="referral-referred-by">
+                {t('referrals', 'referred_by_prefix', 'You were referred by')} {summary.referred_by}.
+              </Text>
+            )
           )}
 
           <Text style={styles.sectionTitle}>{t('referrals', 'people_referred', 'People you referred')}</Text>
@@ -262,6 +336,36 @@ const styles = StyleSheet.create({
   eventReferrerAmount: { fontSize: 11, fontWeight: '700', color: '#059669' },
   eventReferredAmount: { fontSize: 11, color: '#475569' },
   referredByNote: { fontSize: 12, color: '#64748B', marginBottom: 16 },
+  claimCard: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  claimTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
+  claimSubtitle: { fontSize: 11, color: '#64748B', marginTop: 2, marginBottom: 10 },
+  claimRow: { flexDirection: 'row', gap: 8 },
+  claimInput: {
+    flex: 1,
+    minHeight: 40,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    fontFamily: 'monospace',
+  },
+  claimButton: {
+    minHeight: 40,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    backgroundColor: '#1D4ED8',
+    borderRadius: 10,
+  },
+  claimButtonDisabled: { backgroundColor: '#94A3B8' },
+  claimButtonText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  claimErrorText: { fontSize: 11, color: '#B42318', marginTop: 8 },
   empty: { fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 16, marginBottom: 24 },
   personRow: {
     flexDirection: 'row',

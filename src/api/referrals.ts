@@ -49,11 +49,10 @@ type RawReferralSummary = Omit<ReferralSummary, 'events' | 'promo_balance' | 'to
   rewards: (Omit<ReferralReward, 'amount'> & { amount: string | number })[];
 };
 
-// Authenticated. FR-801 - everything the "Refer & earn" screen shows.
 // Decimal fields serialize as JSON strings - same conversion as every
-// other wallet/withdrawal endpoint in this app.
-export async function getMyReferrals(token: string): Promise<ReferralSummary> {
-  const raw = await apiFetch<RawReferralSummary>('/referrals/me', { token });
+// other wallet/withdrawal endpoint in this app. Shared since both
+// GET /referrals/me and POST /referrals/claim return this same shape.
+function toReferralSummary(raw: RawReferralSummary): ReferralSummary {
   return {
     ...raw,
     events: Object.fromEntries(
@@ -66,4 +65,19 @@ export async function getMyReferrals(token: string): Promise<ReferralSummary> {
     total_earned: Number(raw.total_earned),
     rewards: raw.rewards.map((r) => ({ ...r, amount: Number(r.amount) })),
   };
+}
+
+// Authenticated. FR-801 - everything the "Refer & earn" screen shows.
+export async function getMyReferrals(token: string): Promise<ReferralSummary> {
+  const raw = await apiFetch<RawReferralSummary>('/referrals/me', { token });
+  return toReferralSummary(raw);
+}
+
+// Authenticated. FR-802 - names who referred this account, after the fact.
+// Only valid while the server reports can_claim - guarded server-side
+// (see app/api/v1/referrals.py's claim_referral()): once referred, only
+// before any eSIM has been delivered, and never to yourself.
+export async function claimReferralCode(token: string, code: string): Promise<ReferralSummary> {
+  const raw = await apiFetch<RawReferralSummary>('/referrals/claim', { method: 'POST', token, body: { code } });
+  return toReferralSummary(raw);
 }
