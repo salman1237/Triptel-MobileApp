@@ -45,7 +45,7 @@
 
     { "id": "FR-801", "title": "Referral screen", "behavior": "User sees their code/link, stat tiles, per-event reward amounts, and a list of referred people with what each earned", "verification": "npm test -- __tests__/referrals/overview.test.tsx", "state": "passing", "evidence": "6a73869" },
     { "id": "FR-802", "title": "Claim a referrer's code post-signup", "behavior": "Claim form appears only while the server reports the user as eligible (before first purchase) and disappears after", "verification": "npm test -- __tests__/referrals/claim.test.tsx", "state": "passing", "evidence": "c29d297" },
-    { "id": "FR-803", "title": "Referral-link pre-fill", "behavior": "Opening the app via a referral link pre-fills and live-validates the code on the register screen", "verification": "npm test -- __tests__/referrals/link-prefill.test.tsx", "state": "not_started", "evidence": null },
+    { "id": "FR-803", "title": "Referral-link pre-fill", "behavior": "Opening the app via a referral link pre-fills and live-validates the code on the register screen", "verification": "npm test -- __tests__/referrals/link-prefill.test.tsx", "state": "passing", "evidence": "f1ff116" },
 
     { "id": "FR-901", "title": "Compatible-phones / eSIM-support check", "behavior": "User sees the curated device list and the *#06#/EID check guide with the embedded video", "verification": "npm test -- __tests__/guides/compatible-phones.test.tsx", "state": "passing", "evidence": "6805048" },
     { "id": "FR-902", "title": "eSIM setup guide", "behavior": "User sees step-by-step iOS/Android install instructions and a troubleshooting checklist", "verification": "npm test -- __tests__/guides/setup-guide.test.tsx", "state": "passing", "evidence": "f326af5" },
