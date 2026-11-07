@@ -6,12 +6,23 @@ import { updatePreferences } from '../../src/api/auth';
 import { getMyWallets } from '../../src/api/wallets';
 import { ApiError } from '../../src/lib/apiClient';
 import { useAuth } from '../../src/state/AuthContext';
-import { useAppSettings } from '../../src/state/AppSettingsContext';
+import { CURRENCIES, useAppSettings } from '../../src/state/AppSettingsContext';
 
 export default function ProfileScreen() {
-  const { t, formatPrice } = useAppSettings();
+  const { t, formatPrice, currency, setCurrency } = useAppSettings();
   const { user, token, signOut, updateUser } = useAuth();
   const router = useRouter();
+
+  // FR-1302 - switching currency applies immediately (setCurrency already
+  // persists to AsyncStorage for next launch) and, for a signed-in account,
+  // best-effort saves it server-side too, so it follows them to the web app
+  // and other devices - same pattern as the web's AppSettingsContext
+  // setCurrency. A failed save must not undo the switch or interrupt the
+  // user, so it's silently swallowed, same as the web.
+  function handleSelectCurrency(code: string) {
+    setCurrency(code);
+    if (token) updatePreferences(token, { preferred_currency: code }).catch(() => {});
+  }
 
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [saving, setSaving] = useState(false);
@@ -121,6 +132,27 @@ export default function ProfileScreen() {
             {formatPrice(spendableBalance)}
           </Text>
         )}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>{t('profile', 'currency_label', 'Currency')}</Text>
+        <View style={styles.currencyRow} testID="profile-currency-switcher">
+          {CURRENCIES.map((code) => {
+            const selected = code === currency;
+            return (
+              <Pressable
+                key={code}
+                onPress={() => handleSelectCurrency(code)}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                style={[styles.currencyChip, selected && styles.currencyChipSelected]}
+                testID={`profile-currency-${code}`}
+              >
+                <Text style={[styles.currencyChipText, selected && styles.currencyChipTextSelected]}>{code}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -235,6 +267,19 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   walletBalance: { fontSize: 20, fontWeight: '700' },
+  currencyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  currencyChip: {
+    minHeight: 36,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D0D5DD',
+    borderRadius: 18,
+  },
+  currencyChipSelected: { backgroundColor: '#1D4ED8', borderColor: '#1D4ED8' },
+  currencyChipText: { fontSize: 13, fontWeight: '700', color: '#344054' },
+  currencyChipTextSelected: { color: '#fff' },
   input: {
     minHeight: 44,
     borderWidth: 1,

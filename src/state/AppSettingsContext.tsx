@@ -34,6 +34,12 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 };
 const ZERO_DECIMAL_CURRENCIES = new Set(['JPY']);
 
+// FR-1302 - the currency switcher's option list. Matches the web's
+// hardcoded CURRENCIES in src/components/Header.tsx exactly, not every
+// key CURRENCY_SYMBOLS happens to know a symbol for - same reasoning as
+// docs/Rules.md's "Money" section: parity with the web app.
+export const CURRENCIES = ['EUR', 'USD', 'BDT', 'GBP', 'AED', 'SAR'];
+
 type AppSettingsContextValue = {
   lang: string;
   setLang: (lang: string) => void;
