@@ -5,6 +5,51 @@ Each entry: what was decided, why, and what would make it worth revisiting.
 
 ---
 
+## 2026-11-07 — Maestro `launchApp` hang: version-downgrade theory tested and ruled out
+
+**Context:** picking FR-106/305/306/402/602 back up, following the earlier
+entry's "Revisit if" note (try a different Maestro version, since 2.12.1
+might carry a known regression).
+
+**What was tried:** researched upstream (no newer release exists - 2.12.1
+is still latest as of this date). Found GitHub issue
+[mobile-dev-inc/Maestro#3658](https://github.com/mobile-dev-inc/Maestro/issues/3658)
+(open, unfixed) describing `launchApp`/`adb shell` hangs with no bounded
+timeout, which the reporter traced to a dadb socket-timeout default
+regression introduced in CLI 2.10.0/2.11.0. Downloaded CLI 2.9.0 (the last
+release before that suspected regression) from the official GitHub release
+assets into a scratch directory (did not touch the project's installed
+`/c/maestro`), and ran a minimal `launchApp` + `takeScreenshot` flow against
+the same connected Vivo device (`10EF1302BJ000R5`) and app (`co.triptel.app`)
+that hangs on 2.12.1.
+
+**Result: ruled out.** 2.9.0 hung identically - log shows the same
+`Stopping co.triptel.app app during launch` line followed by silence, this
+time for 2+ minutes before failing with exit code 1 (heartbeat-lock I/O
+errors logged every 5s while it waited, a separate, unrelated Windows
+file-locking issue in Maestro's own session-heartbeat writer - not the
+cause of the hang itself). Since the hang reproduces on both the latest
+release and the pre-regression release, it is **not** the dadb timeout
+regression from #3658 - that theory is specific to a different trigger
+(long `inputText` calls / unbounded `adb shell` reads) and doesn't match
+our case. This confirms the original diagnosis stands: a genuine,
+device/environment-specific `launchApp` stall, not something a CLI version
+swap fixes.
+
+**Not resolved.** Did not keep trying further versions blindly past this
+point (2.9.0 was the one principled thing to try, based on the actual
+upstream theory) - reporting back per standing guidance against
+open-ended retry loops.
+
+**Revisit if:** the original entry's remaining untried option - a clean
+Android emulator (removes any lingering on-device AccessibilityService/
+UiAutomation state as a variable, which is the other standing theory for
+what `launchApp`'s internal idle-detection wait might be blocking on) - or
+commenting on/following upstream issue #3658 for a maintainer response,
+since the symptom (hang specifically inside `launchApp`'s internal wait,
+while other commands like `hierarchy` work instantly) hasn't been matched
+to any other open issue either.
+
 ## 2026-11-05 — FR-305 wallet checkout: implementation done and manually verified live; formal Maestro verification blocked on this Vivo device
 
 **Status:** `src/api/orders.ts`, `src/lib/waitForOrder.ts`, `src/components/CheckoutFlowModal.tsx`,
