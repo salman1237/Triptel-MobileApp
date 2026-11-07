@@ -2,11 +2,11 @@ import React from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { getMyWallets, getMyLedger } from '../../src/api/wallets';
-import type { Wallet, LedgerEntry } from '../../src/api/wallets';
-import { formatDate } from '../../src/lib/datetime';
-import { useAppSettings } from '../../src/state/AppSettingsContext';
-import { useAuth } from '../../src/state/AuthContext';
+import { getMyWallets, getMyLedger } from '../../../src/api/wallets';
+import type { Wallet, LedgerEntry } from '../../../src/api/wallets';
+import { formatDate } from '../../../src/lib/datetime';
+import { useAppSettings } from '../../../src/state/AppSettingsContext';
+import { useAuth } from '../../../src/state/AuthContext';
 
 // FR-601 - balances + ledger only. Top-up (gateway FR-602, manual deposit
 // FR-603, result banners FR-604) and withdrawals (FR-701/702) are later,

@@ -8,7 +8,7 @@ import { getMe } from '../../src/api/auth';
 import { getPublicSettings } from '../../src/api/settings';
 import { submitManualDeposit } from '../../src/api/wallets';
 import { ApiError } from '../../src/lib/apiClient';
-import ManualDepositScreen from '../../app/wallet/manual-deposit';
+import ManualDepositScreen from '../../app/(tabs)/wallet/manual-deposit';
 
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(),

@@ -7,7 +7,7 @@ import { AuthProvider } from '../../src/state/AuthContext';
 import { getMe } from '../../src/api/auth';
 import { getMyWallets, getMyLedger } from '../../src/api/wallets';
 import type { Wallet, LedgerEntry } from '../../src/api/wallets';
-import WalletOverviewScreen from '../../app/wallet/index';
+import WalletOverviewScreen from '../../app/(tabs)/wallet/index';
 
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(),

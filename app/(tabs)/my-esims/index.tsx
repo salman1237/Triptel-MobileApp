@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useAppSettings } from '../../src/state/AppSettingsContext';
+import { useAppSettings } from '../../../src/state/AppSettingsContext';
 
 // Placeholder landing point for "My eSIMs" - FR-307's success screen needs
 // somewhere real to link to, but the actual list (cards, tap-to-reveal QR,

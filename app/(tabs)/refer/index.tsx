@@ -10,11 +10,11 @@ import {
   View,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { claimReferralCode, getMyReferrals } from '../../src/api/referrals';
-import type { ReferredPerson } from '../../src/api/referrals';
-import { formatDate } from '../../src/lib/datetime';
-import { useAppSettings } from '../../src/state/AppSettingsContext';
-import { useAuth } from '../../src/state/AuthContext';
+import { claimReferralCode, getMyReferrals } from '../../../src/api/referrals';
+import type { ReferredPerson } from '../../../src/api/referrals';
+import { formatDate } from '../../../src/lib/datetime';
+import { useAppSettings } from '../../../src/state/AppSettingsContext';
+import { useAuth } from '../../../src/state/AuthContext';
 
 // Ported from the web's EVENT_COPY (src/app/refer/page.tsx).
 const EVENT_COPY: Record<string, { label: string; detail: string }> = {

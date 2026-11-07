@@ -7,7 +7,7 @@ import { AuthProvider } from '../../src/state/AuthContext';
 import { getMe } from '../../src/api/auth';
 import { getMyReferrals, claimReferralCode } from '../../src/api/referrals';
 import type { ReferralSummary } from '../../src/api/referrals';
-import ReferralScreen from '../../app/refer/index';
+import ReferralScreen from '../../app/(tabs)/refer/index';
 
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(),

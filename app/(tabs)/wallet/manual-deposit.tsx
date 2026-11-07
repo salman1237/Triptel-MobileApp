@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { getPublicSettings } from '../../src/api/settings';
-import type { PaymentMethod } from '../../src/api/settings';
-import { submitManualDeposit } from '../../src/api/wallets';
-import { ApiError } from '../../src/lib/apiClient';
-import { useAppSettings } from '../../src/state/AppSettingsContext';
-import { useAuth } from '../../src/state/AuthContext';
+import { getPublicSettings } from '../../../src/api/settings';
+import type { PaymentMethod } from '../../../src/api/settings';
+import { submitManualDeposit } from '../../../src/api/wallets';
+import { ApiError } from '../../../src/lib/apiClient';
+import { useAppSettings } from '../../../src/state/AppSettingsContext';
+import { useAuth } from '../../../src/state/AuthContext';
 
 // FR-603 - submit a manual deposit (bank/bKash/Nagad/Rocket/QR) with a
 // transaction ID for admin approval. Ported from the manual-deposit half
