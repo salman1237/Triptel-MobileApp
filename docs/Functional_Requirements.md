@@ -24,7 +24,7 @@ Endpoints are under `https://<api-host>/api/v1` unless noted.
 - **FR-104 Forgot / reset password.** `POST /auth/forgot-password` (generic
   response, no account enumeration) and `POST /auth/reset-password` (token + new
   password). The reset link from email currently points at the web app; see
-  `CLAUDE.md` → "Known Gaps" — MVP opens it in the system browser.
+  `AGENTS.md` → "Known Gaps" — MVP opens it in the system browser.
 - **FR-105 Forced password change.** For accounts created by a merchant with the
   customer's phone number as the password. Requires current password + new
   password. `POST /auth/change-password`. Blocks checkout/wallet actions until
@@ -47,7 +47,7 @@ Endpoints are under `https://<api-host>/api/v1` unless noted.
 - **FR-203 Country landing (explore) screen.** `GET /catalog/destinations/{slug}`
   — flag, name, package count, cheapest price, then the package list (FR-301).
   Deep-linkable by slug for sharing (web-link parity, not necessarily an app
-  universal link — see `CLAUDE.md` → "Known Gaps").
+  universal link — see `AGENTS.md` → "Known Gaps").
 
 ## C. Checkout
 See `docs/Architecture.md` → "The checkout state machine" for the full flow this
@@ -146,7 +146,7 @@ group implements; don't redesign it, port it.
   client-side). `POST /referrals/claim`.
 - **FR-803 Referral-link pre-fill.** Opening the app via a referral link pre-fills
   and live-validates the code on the register screen (`GET /referrals/validate`) —
-  tie this to whatever link-opening mechanism is chosen per `CLAUDE.md` →
+  tie this to whatever link-opening mechanism is chosen per `AGENTS.md` →
   "Known Gaps".
 
 ## I. Guides
@@ -195,7 +195,7 @@ group implements; don't redesign it, port it.
 
 - **FR-1301 Bottom tab bar.** Explore · My eSIMs · Wallet · Refer · Profile — direct
   port of the web's `MobileBottomNav`. No Agent/Partner tabs (out of scope, see
-  `CLAUDE.md`).
+  `AGENTS.md`).
 - **FR-1302 Currency switcher.** EUR/USD/BDT/GBP/AED/SAR (+ whatever
   `/settings/rates` returns), persisted via `PUT /auth/me/preferences`.
 - **FR-1303 Language switcher.** Admin-controlled active-language list, RTL-aware.

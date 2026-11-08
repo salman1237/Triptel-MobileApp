@@ -37,7 +37,7 @@ whole point of pinning it here instead of letting `package.json` drift silently.
   "verify deploys, don't trust CI green" practice, which applies here too.
 - `.env.example` checked in; `.env` gitignored.
 
-## Testing (the three layers, see `CLAUDE.md`/the harness talk this project follows)
+## Testing (the three layers, see `AGENTS.md`/the harness talk this project follows)
 1. **Static**: `npm run typecheck` (`tsc --noEmit`), `npm run lint` (ESLint +
    Prettier check).
 2. **Runtime/component**: `npm test` — Jest + `@testing-library/react-native`.

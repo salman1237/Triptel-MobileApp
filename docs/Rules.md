@@ -62,7 +62,7 @@ without understanding why it's here first.
   to `/merchant/*`, `/agent/*`, `/admin/*`, or `/orders/reseller-orders`.
 - Don't build toward a backend capability that doesn't exist yet (push
   notifications, app deep links) without flagging it in `claude-progress.md` as
-  blocked-on-backend first — see `CLAUDE.md` → "Known Gaps".
+  blocked-on-backend first — see `AGENTS.md` → "Known Gaps".
 
 ## Process
 - **WIP = 1.** Finish and verify the active feature before starting the next.
