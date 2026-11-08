@@ -5,6 +5,69 @@ Each entry: what was decided, why, and what would make it worth revisiting.
 
 ---
 
+## 2026-11-08 — Maestro `launchApp` hang solved: use the Android emulator, not the physical devices, for Maestro runs
+
+**Context:** continuing from the prior entry's "Revisit if" note - the one
+remaining untried theory was that the hang is specific to something about
+the physical devices' state (lingering AccessibilityService/UiAutomation
+state), not Maestro itself.
+
+**Confirmed.** An Android emulator (AVD `Medium_Phone`, already present on
+this machine under `~/.android/avd`, `sdk_gphone64_x86_64`/API 35) ran
+`launchApp` successfully on the first try - both against a stock app
+(`com.android.settings`, instant) and against the project's own dev-client
+APK (`android/app/build/outputs/apk/debug/app-debug.apk`, which is a
+universal build already containing an `x86_64` native library slice, so it
+installed on the emulator with no rebuild needed). No hang, no
+`DeviceServerDiedException`, exits in seconds. This conclusively narrows
+the bug to something about this machine's physical Vivo/Tecno devices
+specifically - not the Maestro install, not the CLI version (already ruled
+out separately), not this project's app.
+
+**Decided: Maestro flows for this project now run against the emulator,
+not a physical device, until/unless the physical-device bug is understood
+or fixed.** Proven end-to-end: logged in on the emulator (`salman2033` /
+password - Google Sign-In still can't be scripted, same limitation as
+before), then ran `flows/checkout-wallet.yaml` (FR-305) for the first time
+ever to a real `PASSED` - full real purchase against staging, debited from
+the wallet, order created. This formally verified FR-305, which had been
+implementation-complete and manually verified for a long time but stuck
+on `not_started` purely because the verification command itself couldn't
+run.
+
+**Practical setup notes for next time:**
+- Start the emulator: `emulator -avd Medium_Phone -no-snapshot -no-boot-anim`
+  (from `$ANDROID_SDK/emulator/emulator`), wait for
+  `adb shell getprop sys.boot_completed` to report `1`.
+- Install the dev-client: `adb -s emulator-5554 install
+  android/app/build/outputs/apk/debug/app-debug.apk` (rebuild first if
+  native deps changed since the last build - check the APK's `lib/`
+  folder has an `x86_64` slice if a future build ever goes arm64-only).
+- `adb -s emulator-5554 reverse tcp:8081 tcp:8081` so the emulator reaches
+  Metro - same as physical devices, and just as easy to silently lose
+  after an adb server restart; re-check this first if a flow starts
+  failing to connect.
+- The dev-client's own landing screen needs one manual connect the first
+  time: tap the `http://` field, type `localhost:8081`, press Enter
+  (tapping the on-screen Connect button is unreliable via `adb shell input
+  tap` - it's easy to instead hit the text-selection toolbar that pops up
+  over the input field; Enter avoids that entirely). After that the app
+  remembers the bundler and `triptel://...` deep links work normally.
+- For navigating inside the app during manual setup (not within a flow
+  file), prefer Maestro's own `tapOn: "<text>"` over raw
+  `adb shell input tap <x> <y>` - the emulator's screen is a different
+  resolution (1080x2400) than the physical devices this session's earlier
+  coordinate-based taps were calibrated against, and `uiautomator dump`
+  doesn't reliably capture RN's view hierarchy on this setup, so blind
+  coordinate taps are unreliable; Maestro's own driver reads the RN tree
+  correctly.
+
+**Revisit if:** picking the physical-device bug back up specifically
+(e.g. to also get on-device manual QA flows scripted) - the original
+diagnostic trail is still in the entry below, unchanged and still
+accurate. Nothing here explains *why* the physical devices hang; it only
+confirms the emulator doesn't, and that's enough to unblock verification.
+
 ## 2026-11-07 — Maestro `launchApp` hang: version-downgrade theory tested and ruled out
 
 **Context:** picking FR-106/305/306/402/602 back up, following the earlier
