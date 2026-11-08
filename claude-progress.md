@@ -4,6 +4,86 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 13 — 2026-11-09 — FR-106 passing (resume purchase after login/register)
+
+**Did:**
+- **Built FR-106 end to end.** `src/state/pendingPurchase.ts` - a new
+  zustand store (first real use of the `zustand` dependency, already
+  planned for exactly this in `docs/Architecture.md`) holding
+  `{ countrySlug, productId, discountCode }`, outside the component
+  tree so it survives the navigation to `/auth/login`. `PackageBrowser`'s
+  Buy Now button is now shown to signed-out users too (previously
+  hidden entirely via an `authStatus === 'authenticated' &&` gate) -
+  tapping it while signed out stashes the selection and pushes to
+  login instead of silently doing nothing. `login.tsx`/`register.tsx`/
+  `set-password.tsx` now call a new `postAuthRoute()` helper instead of
+  hardcoding `router.replace('/')`, landing back on the saved country's
+  page when a purchase is pending - covers the FR-105 forced-password-
+  change detour too, since that can sit between login and the pending
+  purchase. A ref-guarded `useEffect` in `PackageBrowser` restores the
+  discount code and re-runs Buy Now automatically once back on the
+  matching country page, signed in - landing in the same wallet/gateway
+  chooser a signed-in tap would have reached. Implementation commit
+  `bd3ad75`.
+- **A real CPU-contention saga, not an app bug.** The checkout jest
+  suite started false-failing on bare 5000ms default timeouts
+  (`render`/`findByTestId` never even got a chance to resolve) -
+  traced to this machine's CPU being pegged at 100% by processes with
+  nothing to do with this session: XAMPP, Docker, other IDE instances,
+  and one 8-day-old `dllhost` process alone holding 74,000+ CPU-seconds.
+  Confirmed genuinely environmental (not a regression from the FR-106
+  changes) by running a completely untouched, unrelated test file
+  (`__tests__/esims/list.test.tsx`) and seeing it pass but still take
+  30s instead of its usual few seconds. Fixed by stopping only this
+  session's *own* background tasks (the emulator, the Metro `expo
+  start` process, and finished `expo run:android` rebuild shells) -
+  never the user's unrelated processes, which stayed untouched
+  throughout.
+- **Two real bugs found and fixed along the way, both in test/lint
+  code, not the feature itself:**
+  - The new `__tests__/checkout/resume-after-login.test.tsx` had every
+    `renderBrowser()` call un-awaited - this project's
+    `@testing-library/react-native` `render()` returns a `Promise`
+    (unlike vanilla RTL), so the destructured `findByTestId` was
+    `undefined` until every call site got an `await`.
+  - `npx expo lint` flagged the new resume effect under
+    `react-hooks/set-state-in-effect`. Splitting the `setState` calls
+    into a separately-called async function didn't satisfy the rule
+    (it traces into called functions) - fixed with a deliberate,
+    justified `eslint-disable-next-line`, since this is a one-time,
+    ref-guarded reaction to the pending-purchase store (an external
+    system) becoming resumable, not the cascading-render loop the rule
+    exists to catch.
+- **Live Maestro verification, eventually passing on the third
+  attempt.** First attempt: the Vivo hit the exact same
+  `launchApp`/`viewHierarchy` `DeviceServerDiedException` hang
+  documented in `DECISIONS.md` - confirms that diagnosis is still
+  accurate, not a one-off. Second attempt: the emulator itself, freshly
+  restarted, suffered repeated ANRs in completely unrelated system
+  apps (Messages, Pixel Launcher, System UI) before any of this
+  session's own work had touched it, plus adb commands and on-screen
+  text input taking 20-40s each - all symptoms of the same system-wide
+  CPU starvation, not an emulator or app problem. Pushed through by
+  dismissing each ANR and patiently re-entering the Metro URL
+  character-by-character; the flow **passed** once the app actually
+  loaded: signed out via Profile, tapped Buy Now on a real Bangladesh
+  package, got redirected to login, signed back in as `salman2033`,
+  and landed on the payment-method chooser for that same package - not
+  the home screen. Flip commit `09e8e00`.
+
+**Next step:** per the "one at a time" directive, the remaining
+Maestro-blocked FRs are FR-306 (gateway checkout) and FR-602 (gateway
+top-up) - both still need the ShurjoPay hand-off question resolved
+first (see `docs/Architecture.md` -> "Payment", flagged open since
+Session 0) before there's a screen to build against. FR-1103 (Ticket
+thread), FR-1303 (language switcher), and the eSIM-detail/receipt/
+tracking group (FR-403/404/405/501) remain good, unblocked,
+`npm test`-verified candidates. Also worth a beat before diving back
+in: this machine's CPU contention (unrelated to this project) made
+today's live-device work unusually slow and flaky throughout - if it's
+still present next session, it's worth checking in on rather than
+re-discovering it the hard way again.
+
 ## Session 12 — 2026-11-08/09 — FR-402 passing (My eSIMs list, built + formally verified)
 
 **Did:**
