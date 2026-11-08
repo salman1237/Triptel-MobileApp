@@ -1,0 +1,32 @@
+# FR-402 - My eSIMs list.
+#
+# Assumes an existing signed-in session with at least one owned eSIM
+# (stopApp: false preserves it) - this flow does NOT log in, and does not
+# purchase one itself (flows/checkout-wallet.yaml, FR-305, is what creates
+# one against the real backend). Sign in manually on an account that has
+# at least one eSIM before running this - see DECISIONS.md.
+#
+# Runs against the dev-client build (co.triptel.app / triptel:// scheme).
+appId: co.triptel.app
+---
+- launchApp:
+    stopApp: false
+- tapOn: "My eSIMs"
+- assertVisible:
+    id: "my-esims-screen"
+- assertVisible:
+    text: "Tap to reveal your QR code"
+- tapOn:
+    text: "Tap to reveal your QR code"
+    index: 0
+- assertVisible:
+    text: "ICCID"
+- assertVisible:
+    text: "ORDER"
+- assertVisible:
+    text: "Copy LPA code"
+- tapOn:
+    text: "Copy LPA code"
+- extendedWaitUntil:
+    visible: "Copied to clipboard!"
+    timeout: 20000
