@@ -1,0 +1,49 @@
+# FR-106 - Resume purchase after login/register.
+#
+# Starts from an existing signed-in session (stopApp: false preserves it -
+# same convention as the other flows), signs out deliberately via the
+# Profile tab so the flow genuinely exercises the signed-out Buy Now path,
+# then logs back in and asserts it lands on the payment-method chooser
+# for the same product - not the home screen - proving the resume worked.
+#
+# Uses the same real Bangladesh product id as flows/checkout-wallet.yaml
+# (re-check against GET /catalog/destinations/bangladesh if this starts
+# failing on an unrelated "product not found" error - see that flow's own
+# note) and the same password-login account other flows use (salman2033 -
+# Google Sign-In can't be scripted, see DECISIONS.md). Does not complete a
+# real purchase - cancels out of the chooser once the resume is proven, so
+# this flow is safe to re-run without touching the wallet balance.
+#
+# Runs against the dev-client build (co.triptel.app / triptel:// scheme).
+appId: co.triptel.app
+---
+- launchApp:
+    stopApp: false
+- tapOn: "Profile"
+- tapOn:
+    id: "profile-sign-out"
+- openLink: "triptel://explore/bangladesh"
+- scrollUntilVisible:
+    element:
+      id: "package-buy-now-3c9c7567-bd40-462f-bb13-32e6c62f0b90"
+    direction: DOWN
+- tapOn:
+    id: "package-buy-now-3c9c7567-bd40-462f-bb13-32e6c62f0b90"
+- assertVisible:
+    id: "login-submit"
+- tapOn:
+    id: "login-email-input"
+- inputText: "salman2033"
+- tapOn:
+    id: "login-password-input"
+- inputText: "12345678"
+- hideKeyboard:
+    optional: true
+- tapOn:
+    id: "login-submit"
+# The resume: landing in the chooser for the same product, not the home
+# screen, is the one thing this whole flow exists to prove.
+- assertVisible:
+    id: "payment-method-chooser"
+- tapOn:
+    id: "payment-method-cancel"
