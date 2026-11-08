@@ -5,6 +5,48 @@ Each entry: what was decided, why, and what would make it worth revisiting.
 
 ---
 
+## 2026-11-09 — Maestro physical-device bug refined: it's any viewHierarchy-dependent operation, not `launchApp` specifically; plus a slow-emulator assertion-timeout fix
+
+**Context:** while verifying FR-402, re-tested the entry below's bug on the
+Vivo one more time (user chose "close emulator & try on vivo" mid-session).
+
+**Refined diagnosis.** `launchApp` itself completed in ~5s this time -
+directly contradicting the original "it's `launchApp` that hangs" framing.
+But the very next command, `tapOn: "My eSIMs"` (which needs `viewHierarchy`),
+hung for exactly 120.011s and died with the identical
+`maestro.android.DeviceServerDiedException: ... StatusRuntimeException:
+DEADLINE_EXCEEDED` as every previous `launchApp` hang. **The bug isn't
+`launchApp`-specific - it's any Maestro driver operation that needs
+on-device view-hierarchy/deviceInfo gRPC calls (`viewHierarchy` via
+`contentDescriptor`, and apparently `launchApp`'s own readiness check in
+earlier runs) hanging on these physical devices specifically.** The
+Session-11 entry below is still correct that the emulator doesn't have
+this problem and remains the standing verification path; this entry only
+corrects the scope of what's broken on the physical devices, for whoever
+eventually investigates that bug directly.
+
+**Separately: a real but different flake surfaced purely on the emulator**
+under sustained resource strain (hours of use, disk pressure, Gradle
+caches eating the C: drive back down to ~2GB free) - `flows/view-esim-qr.yaml`'s
+final assertion (`"Copied to clipboard!" is visible`, after tapping Copy
+LPA) failed Maestro's default assertion timeout twice in a row, even
+though manually tapping the identical button and watching by hand showed
+the confirmation appear correctly ~1.5s later every time. The
+`expo-clipboard` native bridge call itself was just slower than Maestro's
+default window under load - not a real regression. **Fixed by swapping
+that one `assertVisible` for `extendedWaitUntil` with an explicit 20s
+timeout** (not Maestro's default) in `flows/view-esim-qr.yaml`. Treat this
+as the pattern for any future flow assertion that follows a native-module
+call (clipboard, share sheet, etc.) on this project's Maestro setup -
+default timeouts are tuned for fast CI devices, not a resource-strained
+local emulator.
+
+**Revisit if:** the physical-device bug is ever investigated directly (see
+the entry below for what's still unexplained); or if assertion timeouts
+need bumping project-wide rather than per-flow, in which case look at
+Maestro's global `MAESTRO_CLI_*` timeout env vars instead of patching each
+flow file individually.
+
 ## 2026-11-08 — Maestro `launchApp` hang solved: use the Android emulator, not the physical devices, for Maestro runs
 
 **Context:** continuing from the prior entry's "Revisit if" note - the one
