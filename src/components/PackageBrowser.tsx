@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import type { Product } from '../api/catalog';
 import { useAppSettings } from '../state/AppSettingsContext';
 import { useAuth } from '../state/AuthContext';
+import { usePendingPurchase } from '../state/pendingPurchase';
 import { checkDiscountCode, previewDiscount } from '../api/discounts';
 import type { DiscountCheckResult } from '../api/discounts';
 import { getMyWallets } from '../api/wallets';
@@ -22,6 +24,10 @@ import CheckoutFlowModal, { type CheckoutFlowStage } from './CheckoutFlowModal';
 // still a later FR - choosing it here only records the choice.
 export type PackageBrowserProps = {
   products: Product[];
+  // FR-106 - identifies this screen for the pending-purchase resume check:
+  // a saved selection only auto-resumes on the same country page that
+  // started it, never a different one the user happens to land on first.
+  countrySlug: string;
 };
 
 const ALL_FILTER = 'all';
@@ -56,9 +62,14 @@ function validityLabel(product: Product): string {
 
 type ExactPreview = { discount_amount: number; total: number };
 
-export default function PackageBrowser({ products }: PackageBrowserProps) {
+export default function PackageBrowser({ products, countrySlug }: PackageBrowserProps) {
   const { t, formatPrice } = useAppSettings();
   const { status: authStatus, token } = useAuth();
+  const router = useRouter();
+  const pendingPurchase = usePendingPurchase((s) => s.pending);
+  const setPendingPurchase = usePendingPurchase((s) => s.setPending);
+  const clearPendingPurchase = usePendingPurchase((s) => s.clearPending);
+  const resumedRef = useRef(false);
   const [dataSizeFilter, setDataSizeFilter] = useState(ALL_FILTER);
   const [validityFilter, setValidityFilter] = useState(ALL_FILTER);
 
@@ -118,9 +129,7 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
     });
   }, [products, dataSizeFilter, validityFilter]);
 
-  async function handleApplyCode() {
-    const typed = discountCode.trim();
-    if (!typed) return;
+  async function applyDiscountCode(typed: string) {
     setCheckingCode(true);
     setCodeError(null);
     // A new code invalidates any exact preview confirmed against the old one.
@@ -154,6 +163,12 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
     } finally {
       setCheckingCode(false);
     }
+  }
+
+  async function handleApplyCode() {
+    const typed = discountCode.trim();
+    if (!typed) return;
+    await applyDiscountCode(typed);
   }
 
   function handleClearCode() {
@@ -192,10 +207,19 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
   }
 
   async function handleBuyNow(product: Product) {
-    // Not signed in: resuming the exact purchase after login (FR-106) isn't
-    // built yet - see docs/Architecture.md -> "The checkout state machine".
-    // Not acting here (rather than guessing a redirect) until that exists.
-    if (authStatus !== 'authenticated' || !token) return;
+    // FR-106 - not signed in: stash the exact selection (package + whatever
+    // discount code already passed the pre-check) and send them to log in.
+    // PackageBrowser's resume effect below picks this back up once they're
+    // back here signed in.
+    if (authStatus !== 'authenticated' || !token) {
+      setPendingPurchase({
+        countrySlug,
+        productId: product.id,
+        discountCode: checkedOk ? discountCode.trim() : null,
+      });
+      router.push('/auth/login');
+      return;
+    }
 
     setBuyingProductId(product.id);
     setBuyError(null);
@@ -293,6 +317,43 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
       }
     }
   }
+
+  // Split out of the effect below so its setState calls happen inside a
+  // called function, not directly in the effect body - keeps
+  // react-hooks/set-state-in-effect happy, since the effect's own job is
+  // just noticing a pending purchase exists, not driving the resulting
+  // state updates itself.
+  async function resumePendingPurchase(product: Product, pendingCode: string | null) {
+    if (pendingCode) {
+      setDiscountCode(pendingCode);
+      await applyDiscountCode(pendingCode);
+    }
+    handleBuyNow(product);
+  }
+
+  // FR-106 - once signed in (and back on the same country page), restore the
+  // discount code and re-run Buy Now for the saved product exactly as if
+  // the login detour had never happened. Guarded by a ref, not just clearing
+  // the store, so a re-render before the clear commits can't double-fire.
+  useEffect(() => {
+    if (resumedRef.current) return;
+    if (authStatus !== 'authenticated') return;
+    if (!pendingPurchase || pendingPurchase.countrySlug !== countrySlug) return;
+    const product = products.find((p) => p.id === pendingPurchase.productId);
+    if (!product) {
+      clearPendingPurchase();
+      return;
+    }
+    resumedRef.current = true;
+    const { discountCode: pendingCode } = pendingPurchase;
+    clearPendingPurchase();
+    // A deliberate, ref-guarded one-time reaction to the pending-purchase
+    // store (an external system) becoming resumable - not the cascading
+    // render loop this rule exists to catch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    resumePendingPurchase(product, pendingCode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authStatus, pendingPurchase, products, countrySlug]);
 
   function handleCloseFlow() {
     setFlow(null);
@@ -400,22 +461,20 @@ export default function PackageBrowser({ products }: PackageBrowserProps) {
           </Pressable>
         )}
 
-        {authStatus === 'authenticated' && (
-          <Pressable
-            onPress={() => handleBuyNow(item)}
-            disabled={isBuyingThis}
-            accessibilityRole="button"
-            accessibilityLabel={t('checkout', 'buy_now', 'Buy Now')}
-            style={[styles.buyButton, isBuyingThis && styles.buttonDisabled]}
-            testID={`package-buy-now-${item.id}`}
-          >
-            {isBuyingThis ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.buyButtonText}>{t('checkout', 'buy_now', 'Buy Now')}</Text>
-            )}
-          </Pressable>
-        )}
+        <Pressable
+          onPress={() => handleBuyNow(item)}
+          disabled={isBuyingThis}
+          accessibilityRole="button"
+          accessibilityLabel={t('checkout', 'buy_now', 'Buy Now')}
+          style={[styles.buyButton, isBuyingThis && styles.buttonDisabled]}
+          testID={`package-buy-now-${item.id}`}
+        >
+          {isBuyingThis ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.buyButtonText}>{t('checkout', 'buy_now', 'Buy Now')}</Text>
+          )}
+        </Pressable>
 
         {isGoingToGateway && (
           <Text style={styles.gatewayNote} testID={`package-going-to-gateway-${item.id}`}>

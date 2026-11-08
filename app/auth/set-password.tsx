@@ -5,6 +5,7 @@ import { changePassword } from '../../src/api/auth';
 import { ApiError } from '../../src/lib/apiClient';
 import { useAuth } from '../../src/state/AuthContext';
 import { useAppSettings } from '../../src/state/AppSettingsContext';
+import { postAuthRoute } from '../../src/state/pendingPurchase';
 
 // FR-105 - an account a merchant created on a customer's behalf (their phone
 // number as the password) lands here after login/register until they choose
@@ -43,7 +44,9 @@ export default function SetPasswordScreen() {
     try {
       await changePassword(token, currentPassword, newPassword);
       clearMustChangePassword();
-      router.replace('/');
+      // FR-106 - a forced password change can sit between login and a
+      // pending purchase too; still land back on checkout, not home.
+      router.replace(postAuthRoute());
     } catch (err) {
       if (err instanceof ApiError && typeof err.detail === 'string') {
         setError(err.detail);

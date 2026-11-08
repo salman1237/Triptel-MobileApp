@@ -59,7 +59,7 @@ export default function CountryLandingScreen() {
           {t('explore', 'country_no_packages', 'No packages are available for this destination yet.')}
         </Text>
       ) : (
-        <PackageBrowser products={products} />
+        <PackageBrowser products={products} countrySlug={slug} />
       )}
     </View>
   );

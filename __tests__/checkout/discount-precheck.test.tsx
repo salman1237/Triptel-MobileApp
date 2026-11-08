@@ -12,6 +12,10 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn(),
 }));
 
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+}));
+
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: {
@@ -55,7 +59,7 @@ function renderBrowser() {
   return render(
     <AppSettingsProvider>
       <AuthProvider>
-        <PackageBrowser products={products} />
+        <PackageBrowser products={products} countrySlug="bangladesh" />
       </AuthProvider>
     </AppSettingsProvider>
   );

@@ -5,6 +5,7 @@ import { login, getMe } from '../../src/api/auth';
 import { ApiError } from '../../src/lib/apiClient';
 import { useAuth } from '../../src/state/AuthContext';
 import { useAppSettings } from '../../src/state/AppSettingsContext';
+import { postAuthRoute } from '../../src/state/pendingPurchase';
 import GoogleSignIn from '../../src/components/GoogleSignInButton';
 
 export default function LoginScreen() {
@@ -33,7 +34,9 @@ export default function LoginScreen() {
       if (token.must_change_password) {
         router.replace('/auth/set-password');
       } else {
-        router.replace('/');
+        // FR-106 - lands back on the country page with a purchase in
+        // flight, not home, if that's why they were sent here.
+        router.replace(postAuthRoute());
       }
     } catch (err) {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {

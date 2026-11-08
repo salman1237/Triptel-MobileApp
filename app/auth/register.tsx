@@ -7,6 +7,7 @@ import type { ReferralValidation } from '../../src/api/referrals';
 import { ApiError } from '../../src/lib/apiClient';
 import { useAuth } from '../../src/state/AuthContext';
 import { useAppSettings } from '../../src/state/AppSettingsContext';
+import { postAuthRoute } from '../../src/state/pendingPurchase';
 import GoogleSignIn from '../../src/components/GoogleSignInButton';
 
 // FR-803 - a shared referral link arrives as .../auth/register?ref=CODE
@@ -63,7 +64,9 @@ export default function RegisterScreen() {
       if (token.must_change_password) {
         router.replace('/auth/set-password');
       } else {
-        router.replace('/');
+        // FR-106 - lands back on the country page with a purchase in
+        // flight, not home, if that's why they were sent here.
+        router.replace(postAuthRoute());
       }
     } catch (err) {
       if (err instanceof ApiError && typeof err.detail === 'string') {
