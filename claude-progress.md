@@ -4,6 +4,48 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 11 — 2026-11-08 — FR-305 passing (Maestro unblocked via emulator)
+
+**Did:**
+- **Solved the Maestro `launchApp` hang** that had blocked FR-106/305/
+  306/402/602 since Session 9 - see `DECISIONS.md` for the full
+  writeup. The remaining untried theory (physical-device-specific
+  state, not Maestro/CLI/app) panned out: a local Android emulator
+  (AVD `Medium_Phone`) runs `launchApp` instantly against both a stock
+  app and this project's own dev-client APK (already a universal build
+  with an `x86_64` slice, installed with no rebuild). **This project's
+  Maestro flows now run against the emulator, not a physical device,**
+  until/unless the physical-device bug is understood.
+- **FR-305 Wallet checkout → passing** (`b847e65`, flip `3c6ce7b`).
+  Formally verifies work that's been implementation-complete and
+  manually verified live since Session 9 - only the verification
+  command itself (`maestro test flows/checkout-wallet.yaml`) couldn't
+  run until now. Logged in on the emulator (`salman2033`/password -
+  Google Sign-In still can't be scripted) and ran the flow for real:
+  launched the app, navigated to Bangladesh, bought the cheapest
+  package via wallet, reached `checkout-success` with a real order
+  number, no error - a genuine purchase against the staging backend,
+  debited from the account's real wallet balance.
+- `DECISIONS.md` now also documents the practical emulator setup steps
+  (starting it, installing the APK, `adb reverse`, the one-time manual
+  Metro connect, and why Maestro's own `tapOn: "text"` beats raw
+  coordinate taps for ad-hoc navigation on this setup) for whoever
+  picks up FR-106/306/402/602 next.
+
+**Next step:** FR-306 (gateway checkout) and FR-602 (gateway top-up) -
+their underlying app screens don't exist yet (only the payment-method
+chooser's "Card or mobile banking" *option* is built; the actual
+ShurjoPay hand-off/resume-polling logic is each FR's own unbuilt work),
+so unblocking Maestro alone doesn't finish them - they need real feature
+work first, then a new flow file, same as any other unbuilt FR. FR-402
+(My eSIMs list) is the same story - today it's a placeholder screen
+("Your eSIMs will appear here soon"), FR-402 is building the real list.
+FR-106 (resume purchase after login) needs checking against the current
+checkout state machine to see what's actually built vs. assumed.
+FR-1103 (Ticket thread), FR-1303 (language switcher), and the
+eSIM-detail/receipt/tracking group (FR-403/404/405/501) remain good,
+unblocked, `npm test`-verified candidates too.
+
 ## Session 10 — 2026-11-07 — FR-1203/801/802/803/1301/1302/1102 passing (maintenance mode + referrals + tab bar + currency switcher + support)
 
 **Did:**
