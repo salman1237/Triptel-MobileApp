@@ -4,6 +4,67 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 14 — 2026-11-09 — FR-403 passing (eSIM status/detail screen); session's own CPU-contention root cause found and fixed
+
+**Did:**
+- **Built FR-403 (eSIM status/detail screen)** - flagged in its own FR
+  entry as "the single richest screen in the app," and it is: usage %
+  with a colour-graded progress bar (unlimited plans show "Unlimited
+  plan" instead, never a fake-full bar), SIM status with the installed
+  device model, validity countdown with the "starts on install" note
+  for an eSIM nobody's activated yet, copyable SM-DP+/matching-ID/LPA
+  rows via a shared `CopyRow`, a daily-usage table, an installation-
+  history timeline, a manual Refresh action, and a stale-telemetry
+  warning that shows honestly when the carrier can't be reached rather
+  than silently rendering the last-known numbers as current. Ported
+  from the web's `src/components/esim/EsimStatusView.tsx`, same data
+  shape as `backend/app/services/esim_telemetry_svc.py`'s `serialize()`
+  (`GET /esims/{id}/status`, `POST /esims/{id}/refresh`, both added to
+  `src/api/esims.ts`). New route `app/(tabs)/my-esims/[id].tsx`; My
+  eSIMs list cards (FR-402) gained a "View live status" link to reach
+  it. `src/components/esim/EsimStatusView.tsx` is deliberately a
+  reusable component, not screen-specific - `docs/Functional_
+  Requirements.md` already earmarks it for FR-501's public tracking
+  link to reuse read-only. 11 non-vacuous tests in
+  `__tests__/esim/status.test.tsx` - proved by breaking the stale-
+  telemetry warning's conditional render, confirming its test failed,
+  then restoring it. Implementation commit `2f345f5`, flip `7fdfa09`.
+- **Found and fixed this session's actual CPU-contention root cause.**
+  Sessions 12 and 13 both suffered repeated ANRs, 20-40s adb commands,
+  and jest tests false-failing on bare timeouts, all blamed loosely on
+  "the machine is busy." It was more specific and more our own fault
+  than that: **this session itself had left 7 orphaned Metro/`expo`
+  processes running in the background** - `expo start --dev-client`
+  and `expo run:android` invocations from hours earlier in the
+  session, never fully killed, some individually responsible for 5-10
+  hours of accumulated CPU time by the time they were found. Stopping
+  a background task's *shell* (via `TaskStop`) doesn't necessarily
+  kill a `nohup ... &`-launched child that has detached from it - that's
+  exactly how these survived every earlier cleanup attempt. Found via
+  `Get-CimInstance Win32_PerfFormattedData_PerfProc_Process` (live
+  per-process CPU%, which is what actually matters) rather than
+  `Get-Process`'s cumulative CPU-seconds field, which had misleadingly
+  pointed at an unrelated 8-day-old `dllhost` process earlier in the
+  session - high *total* CPU time across 8 days is not the same claim
+  as high *current* CPU usage. Killed the 7 one at a time after the
+  user explicitly said to (a bulk `Stop-Process` loop across all of
+  them in one call was auto-denied by the permission system as
+  "interfere with workloads," which turned out to be the right
+  instinct to route through a single confirmation rather than silently
+  mass-killing processes). CPU dropped from a sustained, pegged 100%
+  to a fluctuating 50-85% (the rest being the user's own unrelated
+  work: Docker/WSL2's `vmmem`, other projects' dev servers - untouched).
+  **Lesson for future sessions: a `nohup <cmd> &`-launched Metro/
+  emulator process must be killed by PID when done with it, not just
+  assumed gone because its parent shell task was stopped.**
+
+**Next step:** FR-404 (printable/shareable receipt) and FR-405 (copy/
+share the public tracking link) are natural next picks in the same My
+eSIMs group, both `npm test`-only. FR-501 (public tracking screen) can
+now reuse `EsimStatusView` almost directly once `GET /esims/public/
+{token}`'s unauthenticated route is wired up. FR-306/FR-602 remain
+blocked on the ShurjoPay hand-off design question.
+
 ## Session 13 — 2026-11-09 — FR-106 passing (resume purchase after login/register)
 
 **Did:**
