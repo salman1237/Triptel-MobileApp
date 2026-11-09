@@ -43,6 +43,10 @@ jest.mock('expo-clipboard', () => ({
   setStringAsync: jest.fn(),
 }));
 
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+}));
+
 const mockedSecureStore = SecureStore as jest.Mocked<typeof SecureStore>;
 const mockedGetMe = getMe as jest.Mock;
 const mockedGetMyEsims = getMyEsims as jest.Mock;

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { getMyEsims } from '../../../src/api/esims';
@@ -11,6 +12,7 @@ import { useAuth } from '../../../src/state/AuthContext';
 import EsimQr from '../../../src/components/EsimQr';
 
 function EsimCard({ item, t }: { item: MyEsim; t: ReturnType<typeof useAppSettings>['t'] }) {
+  const router = useRouter();
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
   const install = esimInstallLinks(item.lpa_string);
@@ -140,6 +142,16 @@ function EsimCard({ item, t }: { item: MyEsim; t: ReturnType<typeof useAppSettin
             testID={`esim-share-${item.id}`}
           >
             <Text style={styles.secondaryButtonText}>{t('esims', 'share', 'Share')}</Text>
+          </Pressable>
+
+          {/* FR-403 - live usage/status/validity for this one eSIM. */}
+          <Pressable
+            onPress={() => router.push(`/my-esims/${item.id}`)}
+            accessibilityRole="link"
+            style={styles.secondaryButton}
+            testID={`esim-view-status-${item.id}`}
+          >
+            <Text style={styles.secondaryButtonText}>{t('esims', 'view_status', 'View live status')}</Text>
           </Pressable>
         </View>
       )}
