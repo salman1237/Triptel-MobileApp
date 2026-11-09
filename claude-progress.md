@@ -4,6 +4,57 @@ Read this first every session. Newest entry on top.
 
 ---
 
+## Session 15 — 2026-11-09 — FR-404 passing (printable/shareable eSIM receipt)
+
+**Did:**
+- **Built FR-404** - RN equivalent of the web's print sheet
+  (`frontend/src/app/my-esims/[id]/print/page.tsx`): `expo-print`
+  renders a PDF to the cache dir, `expo-sharing` opens the native
+  share sheet on it, since RN has no `window.print()`.
+- **The one real design decision**: the receipt's QR has to be the
+  *exact same* branded QR (error-correction H, circular logo disc) as
+  every other render of it - `docs/Rules.md` → "The QR code" exists
+  specifically for a folded/photographed printout, which is literally
+  what this feature produces. Generating a second QR with a different
+  library would risk it drifting from the real one; pulling in
+  `react-native-view-shot` to screenshot the rendered component would
+  mean yet another new native module needing a rebuild. Settled on a
+  third option: `EsimQr.tsx` gained an optional `getRef` prop that
+  forwards straight to the underlying `QRCode` component, so the
+  already-correct, already-rendered QR can export itself as a PNG via
+  `react-native-svg`'s own built-in `toDataURL()` - `react-native-svg`
+  is already linked into the current build (it's what every other QR
+  render in this app already depends on), so this needed no new native
+  dependency at all.
+- New `src/lib/receiptHtml.ts` - a pure HTML-string builder, no RN
+  imports, deliberately kept that way so `FR-704`'s withdrawal receipt
+  can reuse it directly ("same approach as FR-404," per that FR's own
+  note). New `src/lib/esimReceipt.ts` for the print+share
+  orchestration. New `src/components/esim/EsimReceiptButton.tsx`,
+  wired into `EsimStatusView`'s header next to Refresh - same
+  placement as the web's "Print" button. 9 non-vacuous tests in
+  `__tests__/esim/receipt-pdf.test.tsx` - proved by breaking the LPA
+  activation-code box's conditional render, confirming its test
+  failed, then restoring it. Implementation commit `48af517`, flip
+  `0395337`.
+- **Known gap, flagged rather than hidden**: `expo-print` and
+  `expo-sharing` are both new native modules, not yet linked into the
+  currently-installed dev-client build (same situation `expo-clipboard`
+  was in for FR-402) - this feature's own verification command is
+  `npm test`-only and that part is genuinely done and green, but a real
+  live-device check of the actual PDF-generate-and-share flow still
+  needs a native rebuild first. User explicitly chose to build FR-404
+  now anyway rather than wait, accepting that cost up front.
+
+**Next step:** a native rebuild (`npx expo run:android`) is needed
+before FR-404 can be manually verified live on a device, consistent
+with the standing "check my connected device" instruction - this
+wasn't done as part of this session's work and should happen before
+treating FR-404 as fully done, not just test-passing. After that: FR-
+405 (copy/share the public tracking link) needs no new native modules
+at all and is a good next pick; FR-501 (public tracking screen) can
+now reuse `EsimStatusView` directly.
+
 ## Session 14 — 2026-11-09 — FR-403 passing (eSIM status/detail screen); session's own CPU-contention root cause found and fixed
 
 **Did:**
