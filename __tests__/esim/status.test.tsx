@@ -44,6 +44,15 @@ jest.mock('expo-clipboard', () => ({
   setStringAsync: jest.fn(),
 }));
 
+jest.mock('expo-print', () => ({
+  printToFileAsync: jest.fn(),
+}));
+
+jest.mock('expo-sharing', () => ({
+  isAvailableAsync: jest.fn(),
+  shareAsync: jest.fn(),
+}));
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
   useLocalSearchParams: () => ({ id: 'e1' }),

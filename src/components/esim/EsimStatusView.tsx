@@ -6,6 +6,7 @@ import { esimInstallLinks } from '../../lib/esimInstall';
 import { formatDateTimeZoned } from '../../lib/datetime';
 import { useAppSettings } from '../../state/AppSettingsContext';
 import EsimQr from '../EsimQr';
+import EsimReceiptButton from './EsimReceiptButton';
 
 function CopyRow({ label, value, testID }: { label: string; value: string; testID: string }) {
   const { t } = useAppSettings();
@@ -67,22 +68,39 @@ export default function EsimStatusView({
             {data.iccid ? ` · ${t('esim_status', 'iccid_short', 'ICCID')} ${data.iccid}` : ''}
           </Text>
         </View>
-        {onRefresh && (
-          <Pressable
-            onPress={onRefresh}
-            disabled={refreshing}
-            accessibilityRole="button"
-            accessibilityLabel={t('esim_status', 'refresh', 'Refresh')}
-            style={[styles.refreshButton, refreshing && styles.buttonDisabled]}
-            testID="esim-status-refresh"
-          >
-            {refreshing ? (
-              <ActivityIndicator size="small" color="#1D4ED8" />
-            ) : (
-              <Text style={styles.refreshButtonText}>{t('esim_status', 'refresh', 'Refresh')}</Text>
-            )}
-          </Pressable>
-        )}
+        <View style={styles.headerActions}>
+          {onRefresh && (
+            <Pressable
+              onPress={onRefresh}
+              disabled={refreshing}
+              accessibilityRole="button"
+              accessibilityLabel={t('esim_status', 'refresh', 'Refresh')}
+              style={[styles.refreshButton, refreshing && styles.buttonDisabled]}
+              testID="esim-status-refresh"
+            >
+              {refreshing ? (
+                <ActivityIndicator size="small" color="#1D4ED8" />
+              ) : (
+                <Text style={styles.refreshButtonText}>{t('esim_status', 'refresh', 'Refresh')}</Text>
+              )}
+            </Pressable>
+          )}
+          {/* FR-404 */}
+          <EsimReceiptButton
+            productTitle={data.product.title}
+            orderNo={data.order_no}
+            iccid={data.iccid}
+            dataLabel={data.product.is_unlimited ? t('esim_status', 'unlimited', 'Unlimited') : `${data.product.data_amount_gb} GB`}
+            validityDays={data.validity.days}
+            expiresLabel={
+              data.validity.expires_at
+                ? formatDateTimeZoned(data.validity.expires_at)
+                : `${data.validity.days} ${t('esim_status', 'days_after_install', 'days after you install it')}`
+            }
+            lpaString={data.lpa_string}
+            qrValue={data.qr_code_data || data.lpa_string || null}
+          />
+        </View>
       </View>
 
       {/* Stale-telemetry warning: the carrier couldn't be reached, so we say
@@ -277,6 +295,7 @@ export default function EsimStatusView({
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 16 },
+  headerActions: { flexDirection: 'row', gap: 8 },
   headerMain: { flex: 1, minWidth: 0 },
   title: { fontSize: 20, fontWeight: '800', color: '#0F172A' },
   headerMeta: { fontSize: 11, color: '#64748B', marginTop: 4 },

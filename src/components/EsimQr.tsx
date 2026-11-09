@@ -37,6 +37,12 @@ type EsimQrProps = {
   value: string;
   size?: number;
   testID?: string;
+  // FR-404 - the receipt PDF needs this exact branded QR as a raster image
+  // (expo-print can't render a live RN SVG component), not a second,
+  // separately-generated QR - see docs/Rules.md -> "The QR code" on why
+  // every render of this QR must match byte-for-byte. react-native-svg's
+  // own toDataURL() on this ref is how src/lib/esimReceipt.ts gets it.
+  getRef?: (ref: unknown) => void;
 };
 
 /**
@@ -49,7 +55,7 @@ type EsimQrProps = {
  * the web app once shipped a QR that failed on a folded, photographed
  * printout - see docs/Rules.md -> "The QR code".
  */
-export default function EsimQr({ value, size = 200, testID }: EsimQrProps) {
+export default function EsimQr({ value, size = 200, testID, getRef }: EsimQrProps) {
   const { logoSize, logoMargin, logoBorderRadius } = computeLogoGeometry(size);
 
   return (
@@ -64,6 +70,7 @@ export default function EsimQr({ value, size = 200, testID }: EsimQrProps) {
         logoSize={logoSize}
         logoMargin={logoMargin}
         logoBorderRadius={logoBorderRadius}
+        getRef={getRef}
         testID="esim-qr-code"
       />
     </View>
